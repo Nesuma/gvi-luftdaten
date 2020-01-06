@@ -4,6 +4,7 @@
 
 * [moodle](https://moodle.hft-stuttgart.de/course/view.php?id=1180)
 * [gdocs](https://docs.google.com/document/d/1L1sTrx_w9TN4AysnBQXexRuLNmOCI0pE1Fh8hgygCyc/edit#heading=h.fc86wxv6csrr)
+* [github](https://github.com/Nesuma/gvi-luftdaten)
 
 ## Knowledge
 
@@ -11,7 +12,7 @@
 
 * [Datenbank](https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/)
 * [Erklärung Datenzugriffswege](https://www.dwd.de/DE/klimaumwelt/cdc/klinfo_systeme/klinfo_systeme_node.html)
-* [Lexikon](https://www.dwd.de/DE/service/lexikon/Functions/glossar.html?lv2=102936&lv3=103158)
+* [DWD Begriffslexikon](https://www.dwd.de/DE/service/lexikon/Functions/glossar.html?lv2=102936&lv3=103158)
 * [Stationslexikon](https://www.dwd.de/DE/leistungen/klimadatendeutschland/statliste/statlex_html.html;jsessionid=5FBD5FB6D18B9FA8992B6D246B5F42C8.live11043?view=nasPublication&nn=16102)
 * Stuttgart Schnarrenberg 4929
 * [Schnarrenberg Windaten stündlich bis zum Vortag](https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/wind/recent/stundenwerte_FF_04928_akt.zip)
@@ -30,7 +31,7 @@
 * [Historische Daten](http://archive.luftdaten.info/)
 * [Aktuelle Daten](https://api.luftdaten.info)
 * API nicht verfügbar am 16.12.19 um 17:30
-* [API Übersicht](https://github.com/opendata-stuttgart/meta/wiki/APIs)A
+* [API Übersicht](https://github.com/opendata-stuttgart/meta/wiki/APIs)
 * Keine Informationen zu Zeitzone der Daten, hoffentlich UTC
 
 ### Bundes Immissionsschutzgesetz
@@ -41,4 +42,5 @@
 ### Darstellung
 
 * [Voronoi JS](https://github.com/d3/d3-voronoi)
+* [delaunay successor of d3-voronoi](https://github.com/d3/d3-delaunay)
 
