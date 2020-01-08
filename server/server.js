@@ -91,15 +91,23 @@ let content = getLinesFromFile(fs, measurementsFile);
 let sensor = new WindSensor(numId);
 sensor.storeMeasurements(content);
 
+let sensors = {};
+sensors[numId] = sensor;
+
 // example request http://localhost:3000/4928?year=2018&month=9&day=13&hour=4
 app.get('/', (req, res) => res.send(content));
-app.get('/4928', (req, res) => {
+app.get('/wind', (req, res) => {
+    station = req.query.station;
     year = req.query.year;
     month = req.query.month;
     day = req.query.day;
     hour = req.query.hour;
-    res.send(sensor.measures[year][month][day][hour]);
+    res.send(sensors[station].measures[year][month][day][hour]);
 });
+
+//app.get('/air', (req,res) =>{
+
+//}
 
 app.listen(port, () => console.log(`Example on port ${port}`));
 

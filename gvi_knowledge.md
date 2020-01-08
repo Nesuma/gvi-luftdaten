@@ -47,3 +47,9 @@
 ### Straßen und Karten
 
 * [Leaflet mit HERE Karte](https://developer.here.com/tutorials/raster-tile-leaflet/)
+
+### Datenserver
+
+* Liefert alte Winddaten und Luftdaten im Stundentakt
+* Aktuelle Winddaten im Minutentakt
+
