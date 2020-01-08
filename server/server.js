@@ -18,7 +18,6 @@ let directionIndex = 4;
 class WindSensor {
     constructor(content) {
         this.measures = {};
-        this.storeMeasurements(content)
     }
 
     addDatapoint(year, month, day, hour, minutes, speed, direction) {
@@ -99,17 +98,15 @@ function readFiles(dirname) {
     return dataPromises;
 }
 
-async function getSensorWithData(dataPromise) {
-    let sensor;
+async function getSensorData(dataPromise) {
     // console.log("waiting for data promise");
     // console.log(dataPromise);
     const data = await dataPromise;
     let content;
     content = data.substring(data.indexOf("\n") + 1); // remove first line
     content = content.substring(0, content.lastIndexOf("\n")); // remove last line
-    sensor = new WindSensor(content.split("\n"));
+    return content.split("\n");
     // console.log(sensor);
-    return sensor;
 }
 
 
@@ -122,13 +119,16 @@ async function startHourlyWindAPI() {
     // console.log(dataPromises);
 
     for (const [filename, dataPromise] of Object.entries(dataPromises)) {
-        sensorPromises[filename] = getSensorWithData(dataPromise);
+        sensorPromises[filename] = getSensorData(dataPromise);
     }
     // console.log("sensor promises: ");
     // console.log(sensorPromises);
-    for (const [id, sensorPromise] of Object.entries(sensorPromises)) {
-        let numId = extractSensorId(id);
-        sensors[numId] = await sensorPromise;
+    for (const [filename, sensorPromise] of Object.entries(sensorPromises)) {
+        let numId = extractSensorId(filename);
+        if (sensors[numId] === undefined){
+            sensors[numId] = new WindSensor();
+        }
+         sensors[numId].storeMeasurements(await sensorPromise);
     }
 
     console.log(sensors);
@@ -158,7 +158,7 @@ async function startHourlyWindAPI() {
             sensor = sensors[station].measures[year][month][day][hour][minutes];
             // somehow necessary because hour: 30 40 50 ... and minutes 2 3 4 ... 200 300 400 all don't throw an error but are undefined
             // couldn't reproduce it with month
-            if (sensor === undefined){
+            if (sensor === undefined) {
                 throw new Error();
             }
         } catch (err) {
