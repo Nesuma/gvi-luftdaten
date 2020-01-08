@@ -143,10 +143,10 @@ async function startHourlyWindAPI() {
     });
 
     app.get('/wind/:stationId', (req, res) => {
-        res.send("There are hourly, daily and todays data");
+        res.send("Ask like this: http://localhost:3000/wind/4928/2020-1-8-16-20");
     });
 
-    app.get('/wind/:stationId/hourly/:year-:month-:day-:hour-:minutes', (req, res) => {
+    app.get('/wind/:stationId/:year-:month-:day-:hour-:minutes', (req, res) => {
         station = req.params['stationId'];
         year = req.params['year'];
         month = req.params['month'];
