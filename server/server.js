@@ -35,7 +35,6 @@ class WindSensor {
         // console.log(this.measures[year][month][day][hour]);
     }
 
-
     storeMeasurements(content) {
         for (let line of content) {
             // console.log("line: " + line);

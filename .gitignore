@@ -2,6 +2,9 @@
 *.txt
 *.zip
 *.sh
+*data
+*data.csv
+*.DS_Store
 
 #idea
 .idea
