@@ -30,7 +30,7 @@ class WindSensor {
         if (this.measures[year][month][day] === undefined) {
             this.measures[year][month][day] = [];
         }
-        this.measures[year][month][day][hour] = {speed: speed, direction: direction};
+        this.measures[year][month][day][hour] = { speed: speed, direction: direction };
         // console.log("added: " + year + "-" +month+ "-" +day+ "-" +hour+ "-" +speed+ "-" +direction)
         // console.log(this.measures[year][month][day][hour]);
     }
@@ -62,7 +62,6 @@ class WindSensor {
             // console.log("year: " + year+" month: "+month+" day: "+day+" hour: "+hour);
 
             this.addDatapoint(year, month, day, hour, speed, direction);
-
         }
     }
 }
@@ -97,11 +96,11 @@ sensors[numId] = sensor;
 // example request http://localhost:3000/4928?year=2018&month=9&day=13&hour=4
 app.get('/', (req, res) => res.send(content));
 app.get('/wind', (req, res) => {
-    station = req.query.station;
-    year = req.query.year;
-    month = req.query.month;
-    day = req.query.day;
-    hour = req.query.hour;
+    let station = req.query.station;
+    let year = req.query.year;
+    let month = req.query.month;
+    let day = req.query.day;
+    let hour = req.query.hour;
     res.send(sensors[station].measures[year][month][day][hour]);
 });
 
@@ -110,6 +109,3 @@ app.get('/wind', (req, res) => {
 //}
 
 app.listen(port, () => console.log(`Example on port ${port}`));
-
-
-
