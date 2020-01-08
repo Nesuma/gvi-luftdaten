@@ -1,0 +1,56 @@
+{
+    "env": {
+        "browser": true,
+        "es6": true
+    },
+    "extends": "standard",
+    "globals": {
+        "Atomics": "readonly",
+        "SharedArrayBuffer": "readonly"
+    },
+    "parserOptions": {
+        "sourceType": "module"
+    },
+    "rules": {
+        "arrow-body-style": "off",
+        "arrow-parens": "off",
+        "arrow-spacing": "off",
+        "constructor-super": "off",
+        "generator-star-spacing": "off",
+        "no-class-assign": "off",
+        "no-confusing-arrow": "off",
+        "no-const-assign": "off",
+        "no-dupe-class-members": "off",
+        "no-duplicate-imports": "off",
+        "no-new-symbol": "off",
+        "no-restricted-imports": "off",
+        "no-this-before-super": "off",
+        "no-useless-computed-key": "off",
+        "no-useless-constructor": "off",
+        "no-useless-rename": "off",
+        "object-shorthand": "off",
+        "prefer-arrow-callback": "off",
+        "prefer-const": "off",
+        "prefer-destructuring": "off",
+        "prefer-numeric-literals": "off",
+        "prefer-rest-params": "off",
+        "prefer-spread": "off",
+        "prefer-template": "off",
+        "require-yield": "off",
+        "rest-spread-spacing": "off",
+        "sort-imports": "off",
+        "symbol-description": "off",
+        "template-curly-spacing": "off",
+        "yield-star-spacing": "off",
+        "spaced-comment": "off",
+        "indent": "off",
+        "max-len": "off",
+        "require-jsdoc": "off",
+        "no-trailing-spaces": "off",
+        "quotes": "off",
+        "eol-last": "off",
+        "curly": "error",
+        "space-before-function-paren": "off",
+        "semi": "off"
+    }
+}

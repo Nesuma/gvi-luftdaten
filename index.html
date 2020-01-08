@@ -1,0 +1,42 @@
+<html>
+
+<head>
+    <title>HERE & Leaflet</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"></script>
+    <style>
+        body,
+        html {
+            border: 0;
+            padding: 0;
+            margin: 0;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script>
+        const here = {
+            id: 'K5HfFBQgYWx6FblO4hpL',
+            code: 'dgHy68deKACGPwfkfKwMxKZG5scMinBnGSsGE8FsBtI'
+        }
+        const style = 'reduced.night';
+
+        const hereTileUrl = `https://2.base.maps.api.here.com/maptile/2.1/maptile/newest/${style}/{z}/{x}/{y}/512/png8?app_id=${here.id}&app_code=${here.code}&ppi=320`;
+
+        const map = L.map('map', {
+            center: [37.773972, -122.431297],
+            zoom: 11,
+            layers: [L.tileLayer(hereTileUrl)]
+        });
+        map.attributionControl.addAttribution('&copy; HERE 2019');
+    </script>
+</body>
+
+</html>
