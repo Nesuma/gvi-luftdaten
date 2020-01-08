@@ -1,42 +1,56 @@
 const express = require('express')
-const app = express()
-const port = 3000
-
-var fs = require('fs');
+const fs = require('fs');
+const {promisify} = require('util');
+// const fs = require('fs').promises; // makes file reading work with async / await
+const app = express();
+const port = 3000;
+const readFileAsync = promisify(fs.readFile);
 
 let separator = ';';
-let yearDetail = 4;
-let monthDetail = 2;
-let dayDetail = 2;
-let hourDetail = 2;
+
 
 let dateIndex = 1;
 let speedIndex = 3;
 let directionIndex = 4;
 
+// let sensors = {};
+
 class WindSensor {
-    constructor(id) {
-        this.id = id;
-        this.measures = [];
+    constructor(content) {
+        this.measures = {};
+        this.storeMeasurements(content)
     }
 
-    addDatapoint(year, month, day, hour, speed, direction) {
+    addDatapoint(year, month, day, hour, minutes, speed, direction) {
         if (this.measures[year] === undefined) {
-            this.measures[year] = [];
+            this.measures[year] = {};
         }
         if (this.measures[year][month] === undefined) {
-            this.measures[year][month] = [];
+            this.measures[year][month] = {};
         }
         if (this.measures[year][month][day] === undefined) {
-            this.measures[year][month][day] = [];
+            this.measures[year][month][day] = {};
         }
-        this.measures[year][month][day][hour] = {speed: speed, direction: direction};
-        // console.log("added: " + year + "-" +month+ "-" +day+ "-" +hour+ "-" +speed+ "-" +direction)
-        // console.log(this.measures[year][month][day][hour]);
+        if (this.measures[year][month][day][hour] === undefined) {
+            this.measures[year][month][day][hour] = {};
+        }
+        if (this.measures[year][month][day][minutes] === undefined) {
+            this.measures[year][month][day][minutes] = {};
+        }
+        this.measures[year][month][day][hour][minutes] = {speed: speed, direction: direction};
+        // console.log(this.measures);
+        // console.log("added: " + year + "-" +month+ "-" +day+ "-" +hour+ "-" + minutes + "-" +speed+ "-" +direction)
+        // console.log(this.measures[year][month][day][hour][minutes]);
     }
 
 
     storeMeasurements(content) {
+        let yearDetail = 4;
+        let monthDetail = 2;
+        let dayDetail = 2;
+        let hourDetail = 2;
+        let minutesDetail = 2;
+
         for (let line of content) {
             // console.log("line: " + line);
             let attributes = line.split(separator);
@@ -58,52 +72,116 @@ class WindSensor {
             currentIndex += dayDetail;
 
             let hour = parseInt(date.substring(currentIndex, currentIndex + hourDetail));
+            currentIndex += hourDetail;
 
-            // console.log("year: " + year+" month: "+month+" day: "+day+" hour: "+hour);
+            let minutes = parseInt(date.substring(currentIndex, currentIndex + minutesDetail));
 
-            this.addDatapoint(year, month, day, hour, speed, direction);
+            // console.log("year: " + year+" month: "+month+" day: "+day+" hour: "+hour+" minutes: " + minutes);
+
+            this.addDatapoint(year, month, day, hour, minutes, speed, direction);
 
         }
     }
 }
 
-function extractNumericalId(id) {
-    return parseInt(id.substring(0, id.indexOf('.')));
+function extractSensorId(id) {
+    // produkt_ff_stunde_20180707_20200107_04928.txt
+    return parseInt(id.substring(id.lastIndexOf("_") + 1, id.indexOf('.')));
 }
 
-function getLinesFromFile(fileSystem, filePath) {
-    var content = fs.readFileSync(filePath, 'utf8');
-    // cut the first line
-    content = content.substring(content.indexOf("\n") + 1);
-    // cut the last line
-    content = content.substring(0, content.lastIndexOf("\n"));
-    return content.split("\n");
+function readFiles(dirname) {
+
+    let filenames = fs.readdirSync(dirname); // collects file names in directory (sync)
+    let dataPromises = {};
+    for (let filename of filenames) {
+        dataPromises[filename] = readFileAsync(dirname + filename, 'utf-8'); // async read call returns promise
+    }
+    return dataPromises;
 }
 
-// hier würde man dann die zip vom dwd mit der sensor nummer runterladen und entpacken
+async function getSensorWithData(dataPromise) {
+    let sensor;
+    // console.log("waiting for data promise");
+    // console.log(dataPromise);
+    const data = await dataPromise;
+    let content;
+    content = data.substring(data.indexOf("\n") + 1); // remove first line
+    content = content.substring(0, content.lastIndexOf("\n")); // remove last line
+    sensor = new WindSensor(content.split("\n"));
+    // console.log(sensor);
+    return sensor;
+}
 
-// produkt datei einlesen
-let measurementsFile = "04928.txt";
-let numId = extractNumericalId(measurementsFile);
 
-let content = getLinesFromFile(fs, measurementsFile);
+async function startHourlyWindAPI() {
+    let sensors = {};
+    const dataPromises = readFiles('../data/wind/');
 
-let sensor = new WindSensor(numId);
-sensor.storeMeasurements(content);
+    let sensorPromises = {};
+    // console.log("data promises: ");
+    // console.log(dataPromises);
 
-let sensors = {};
-sensors[numId] = sensor;
+    for (const [filename, dataPromise] of Object.entries(dataPromises)) {
+        sensorPromises[filename] = getSensorWithData(dataPromise);
+    }
+    // console.log("sensor promises: ");
+    // console.log(sensorPromises);
+    for (const [id, sensorPromise] of Object.entries(sensorPromises)) {
+        let numId = extractSensorId(id);
+        sensors[numId] = await sensorPromise;
+    }
 
-// example request http://localhost:3000/4928?year=2018&month=9&day=13&hour=4
-app.get('/', (req, res) => res.send(content));
-app.get('/wind', (req, res) => {
-    station = req.query.station;
-    year = req.query.year;
-    month = req.query.month;
-    day = req.query.day;
-    hour = req.query.hour;
-    res.send(sensors[station].measures[year][month][day][hour]);
-});
+    console.log(sensors);
+    let windDocumentation = "There are multiple stations:";
+
+    app.get('/wind', (req, res) => {
+        let doc = windDocumentation;
+        for (const [key, value] of Object.entries(sensors)) {
+            doc += "\n" + key;
+        }
+        res.send(doc);
+    });
+
+    app.get('/wind/:stationId', (req, res) => {
+        res.send("There are hourly, daily and todays data");
+    });
+
+    app.get('/wind/:stationId/hourly/:year-:month-:day-:hour-:minutes', (req, res) => {
+        station = req.params['stationId'];
+        year = req.params['year'];
+        month = req.params['month'];
+        day = req.params['day'];
+        hour = req.params['hour'];
+        minutes = req.params['minutes'];
+        let sensor;
+        try {
+            sensor = sensors[station].measures[year][month][day][hour][minutes];
+            // somehow necessary because hour: 30 40 50 ... and minutes 2 3 4 ... 200 300 400 all don't throw an error but are undefined
+            // couldn't reproduce it with month
+            if (sensor === undefined){
+                throw new Error();
+            }
+        } catch (err) {
+            res.status(404);
+            res.send("Station " + station + " or date [" + day + "." + month + "." + year + " " + hour + ":" + minutes + "] unknown");
+        }
+
+        res.send(sensor);
+    });
+}
+
+function startAPI() {
+    startHourlyWindAPI();
+
+    // startTodayWindAPI();
+
+
+    app.get('/', (req, res) => res.send("Wind and Dust Archive API"));
+
+}
+
+startAPI();
+
 
 //app.get('/air', (req,res) =>{
 
