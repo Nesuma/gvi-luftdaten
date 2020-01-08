@@ -91,6 +91,7 @@ let content = getLinesFromFile(fs, measurementsFile);
 let sensor = new WindSensor(numId);
 sensor.storeMeasurements(content);
 
+// example request http://localhost:3000/4928?year=2018&month=9&day=13&hour=4
 app.get('/', (req, res) => res.send(content));
 app.get('/4928', (req, res) => {
     year = req.query.year;
