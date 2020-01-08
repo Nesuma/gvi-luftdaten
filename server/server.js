@@ -188,6 +188,3 @@ startAPI();
 //}
 
 app.listen(port, () => console.log(`Example on port ${port}`));
-
-
-
