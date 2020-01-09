@@ -62,7 +62,7 @@
             this.lon = lon
             this.dust = dust
         }
-
+        let dustsensors;
 
         function initialize() {
             let center = L.latLng(48.8, 9.2);
@@ -74,14 +74,22 @@
                 maxZoom: 18
             });
             map.addLayer(osm);
-            let dustsensors = L.layerGroup().addTo(map);
+            dustsensors = L.layerGroup().addTo(map);
 
             let background = { "Clear map": osm };
             let foreground = { "Feinstaubsensoren": dustsensors };
             let control = L.control.layers(background, foreground, { collapsed: false }).addTo(map);
             let dao = new DataObject(20144, 50.814, 6.590, 0.82)
 
+            loadapi()
+            setInterval(function() {
+                loadapi()
+            }, 300000)
+            //var marker = L.marker([dao.lat, dao.lon]).addTo(map);
 
+        }
+
+        function loadapi() {
             $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
                 console.log(data);
 
@@ -93,8 +101,6 @@
                 });
 
             })
-            //var marker = L.marker([dao.lat, dao.lon]).addTo(map);
-
         }
     </script>
     <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
