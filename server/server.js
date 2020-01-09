@@ -123,16 +123,17 @@ class WindSensor {
         }
     }
 }
-let id = [];
 
 
-function getIds() {
+function getDustSensorIds() {
+    let id = [];
     $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
         data.forEach(element => {
             id.push(element.id)
         });
-        console.log(id);
-    })
+        // console.log(id);
+    });
+    return id;
 }
 
 function extractSensorId(id) {
@@ -228,7 +229,7 @@ async function getDustSensorData(){
 
 async function startDustAPI(){
     let sensors = {};
-    downloadCSV();
+
     // const dataPromises = readFiles('../data/dust/');
     //
     // let sensorPromises = {};
@@ -289,6 +290,10 @@ async function startDustAPI(){
 
 function startAPI() {
     startWindAPI();
+
+
+
+    downloadCSV();
 
     startDustAPI();
 
