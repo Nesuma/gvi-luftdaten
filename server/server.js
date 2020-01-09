@@ -1,6 +1,6 @@
 const express = require('express')
 const fs = require('fs');
-const {promisify} = require('util');
+const { promisify } = require('util');
 // const fs = require('fs').promises; // makes file reading work with async / await
 const app = express();
 const port = 3000;
@@ -77,7 +77,7 @@ class WindSensor {
         if (this.measures[year][month][day][minutes] === undefined) {
             this.measures[year][month][day][minutes] = {};
         }
-        this.measures[year][month][day][hour][minutes] = {speed: speed, direction: direction};
+        this.measures[year][month][day][hour][minutes] = { speed: speed, direction: direction };
         // console.log(this.measures);
         // console.log("added: " + year + "-" +month+ "-" +day+ "-" +hour+ "-" + minutes + "-" +speed+ "-" +direction)
         // console.log(this.measures[year][month][day][hour][minutes]);
@@ -123,6 +123,17 @@ class WindSensor {
         }
     }
 }
+let id = [];
+
+
+function getIds() {
+    $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
+        data.forEach(element => {
+            id.push(element.id)
+        });
+        console.log(id);
+    })
+}
 
 function extractSensorId(id) {
     // produkt_ff_stunde_20180707_20200107_04928.txt
@@ -166,10 +177,10 @@ async function startWindAPI() {
     // console.log(sensorPromises);
     for (const [filename, sensorPromise] of Object.entries(sensorPromises)) {
         let numId = extractSensorId(filename);
-        if (sensors[numId] === undefined){
+        if (sensors[numId] === undefined) {
             sensors[numId] = new WindSensor();
         }
-         sensors[numId].storeMeasurements(await sensorPromise);
+        sensors[numId].storeMeasurements(await sensorPromise);
     }
 
     console.log(sensors);
