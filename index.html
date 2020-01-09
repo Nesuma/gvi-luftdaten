@@ -74,18 +74,24 @@
                 maxZoom: 18
             });
             map.addLayer(osm);
+            let dustsensors = L.layerGroup().addTo(map);
 
+            let background = { "Clear map": osm };
+            let foreground = { "Feinstaubsensoren": dustsensors };
+            let control = L.control.layers(background, foreground, { collapsed: false }).addTo(map);
             let dao = new DataObject(20144, 50.814, 6.590, 0.82)
 
-            let dustsensors = L.layerGroup().addTo(map);
 
             $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
                 console.log(data);
-                
+
                 data.forEach(element => {
                     let marker = L.marker([element.location.latitude, element.location.longitude]).addTo(dustsensors);
+                    if (marker !== undefined) {
+                        marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + element.timestamp);
+                    }
                 });
-                
+
             })
             //var marker = L.marker([dao.lat, dao.lon]).addTo(map);
 
