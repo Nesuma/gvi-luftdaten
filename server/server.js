@@ -15,6 +15,47 @@ let directionIndex = 4;
 
 // let sensors = {};
 
+//https://learnscraping.com/how-to-download-files-with-nodejs-using-request/
+// Sensor 13463
+
+async function downloadCSV(date,filename) {
+    const request = require('request');
+    /* Create an empty file where we can save data */
+    let file = fs.createWriteStream(filename);
+    /* Using Promises so that we can use the ASYNC AWAIT syntax */
+    await new Promise((resolve, reject) => {
+        let stream = request({
+            /* Here you should specify the exact link to the file you are trying to download */
+            uri: 'http://archive.luftdaten.info/'+date+'/'+filename,
+            headers: {
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8,ro;q=0.7,ru;q=0.6,la;q=0.5,pt;q=0.4,de;q=0.3',
+                'Cache-Control': 'max-age=0',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36'
+            },
+            /* GZIP true for most of the websites now, disable it if you don't need it */
+            gzip: true
+        })
+            .pipe(file)
+            .on('finish', () => {
+                console.log(`The file is finished downloading.`);
+                resolve();
+            })
+            .on('error', (error) => {
+                reject(error);
+            })
+    })
+        .catch(error => {
+            console.log(`Something happened: ${error}`);
+        });
+}
+class DustSensor{
+    constructor(){}
+}
+
 class WindSensor {
     constructor(content) {
         this.measures = {};
@@ -98,7 +139,7 @@ function readFiles(dirname) {
     return dataPromises;
 }
 
-async function getSensorData(dataPromise) {
+async function getWindSensorData(dataPromise) {
     // console.log("waiting for data promise");
     // console.log(dataPromise);
     const data = await dataPromise;
@@ -110,7 +151,7 @@ async function getSensorData(dataPromise) {
 }
 
 
-async function startHourlyWindAPI() {
+async function startWindAPI() {
     let sensors = {};
     const dataPromises = readFiles('../data/wind/');
 
@@ -119,7 +160,7 @@ async function startHourlyWindAPI() {
     // console.log(dataPromises);
 
     for (const [filename, dataPromise] of Object.entries(dataPromises)) {
-        sensorPromises[filename] = getSensorData(dataPromise);
+        sensorPromises[filename] = getWindSensorData(dataPromise);
     }
     // console.log("sensor promises: ");
     // console.log(sensorPromises);
@@ -170,10 +211,76 @@ async function startHourlyWindAPI() {
     });
 }
 
-function startAPI() {
-    startHourlyWindAPI();
+async function getDustSensorData(){
 
-    // startTodayWindAPI();
+}
+
+async function startDustAPI(){
+    let sensors = {};
+    downloadCSV();
+    // const dataPromises = readFiles('../data/dust/');
+    //
+    // let sensorPromises = {};
+    // // console.log("data promises: ");
+    // // console.log(dataPromises);
+    //
+    // for (const [filename, dataPromise] of Object.entries(dataPromises)) {
+    //     sensorPromises[filename] = getDustSensorData(dataPromise);
+    // }
+    // // console.log("sensor promises: ");
+    // // console.log(sensorPromises);
+    // for (const [filename, sensorPromise] of Object.entries(sensorPromises)) {
+    //     let numId = extractSensorId(filename);
+    //     if (sensors[numId] === undefined){
+    //         sensors[numId] = new WindSensor();
+    //     }
+    //     sensors[numId].storeMeasurements(await sensorPromise);
+    // }
+    //
+    // console.log(sensors);
+    // let windDocumentation = "There are multiple stations:";
+    //
+    // app.get('/wind', (req, res) => {
+    //     let doc = windDocumentation;
+    //     for (const [key, value] of Object.entries(sensors)) {
+    //         doc += "\n" + key;
+    //     }
+    //     res.send(doc);
+    // });
+    //
+    // app.get('/wind/:stationId', (req, res) => {
+    //     res.send("Ask like this: http://localhost:3000/wind/4928/2020-1-8-16-20");
+    // });
+    //
+    // app.get('/wind/:stationId/:year-:month-:day-:hour-:minutes', (req, res) => {
+    //     station = req.params['stationId'];
+    //     year = req.params['year'];
+    //     month = req.params['month'];
+    //     day = req.params['day'];
+    //     hour = req.params['hour'];
+    //     minutes = req.params['minutes'];
+    //     let sensor;
+    //     try {
+    //         sensor = sensors[station].measures[year][month][day][hour][minutes];
+    //         // somehow necessary because hour: 30 40 50 ... and minutes 2 3 4 ... 200 300 400 all don't throw an error but are undefined
+    //         // couldn't reproduce it with month
+    //         if (sensor === undefined) {
+    //             throw new Error();
+    //         }
+    //     } catch (err) {
+    //         res.status(404);
+    //         res.send("Station " + station + " or date [" + day + "." + month + "." + year + " " + hour + ":" + minutes + "] unknown");
+    //     }
+    //
+    //     res.send(sensor);
+    // });
+}
+
+function startAPI() {
+    startWindAPI();
+
+    startDustAPI();
+
 
 
     app.get('/', (req, res) => res.send("Wind and Dust Archive API"));
