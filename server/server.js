@@ -23,59 +23,45 @@ let directionIndex = 4;
 
 async function getDustSensorIds(area) {
     let options = {uri: "https://data.sensor.community/airrohr/v1/filter/area=" + area, json: true};
-    let ids = [];
+    let ids = {}; // is an object instead of array to prevent duplicates
     let rp = await request_promise(options);
 
-    for (measurment of rp) {
-        ids.push(measurment.sensor.id);
+    for (let measurement of rp) {
+        for (let sensordata of measurement.sensordatavalues) {
+            if ((sensordata.value_type === "P1") || (measurement.sensordatavalues.value_type === "P2")) {
+                ids[measurement.sensor.id] = "placeholder";
+            }
+        }
     }
     return ids;
 }
 
-let id = [];
-
-function getIds() {
-    $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
-        data.forEach(element => {
-            id.push(element.id)
-        });
-        console.log(id);
-    })
-}
-
 async function downloadCSV(date, sensorId, outputPath) {
     let filename = date.toString() + "_sds011_sensor_" + sensorId + ".csv";
-    /* Create an empty file where we can save data */
-    let file = fs.createWriteStream(outputPath + filename);
-    /* Using Promises so that we can use the ASYNC AWAIT syntax */
-    await new Promise((resolve, reject) => {
-        let stream = request({
-            /* Here you should specify the exact link to the file you are trying to download */
-            uri: 'http://archive.luftdaten.info/' + date + '/' + filename,
-            headers: {
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8,ro;q=0.7,ru;q=0.6,la;q=0.5,pt;q=0.4,de;q=0.3',
-                'Cache-Control': 'max-age=0',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36'
-            },
-            /* GZIP true for most of the websites now, disable it if you don't need it */
-            gzip: true
-        })
-            .pipe(file)
-            .on('finish', () => {
-                console.log(`The file is finished downloading.`);
-                resolve();
-            })
-            .on('error', (error) => {
-                reject(error);
-            })
-    })
-        .catch(error => {
-            console.log(`Something happened: ${error}`);
-        });
+    let outputDirectory = outputPath + "/" + date + "/";
+    let outputFilePath = outputDirectory + filename;
+    if (!fs.existsSync(outputDirectory)) {
+        fs.mkdirSync(outputDirectory);
+    }
+    if (!fs.existsSync(outputFilePath)) {
+        let options = {uri: 'http://archive.luftdaten.info/' + date + '/' + filename, json: true};
+        // GET is what takes so long
+        try {
+            fs.writeFileSync(outputFilePath, await request_promise(options));
+            // console.log("downloaded " + filename);
+        } catch (err) {
+            if (err === undefined) {
+                // UnhandledPromiseRejectionWarning: TypeError: Cannot read property 'statusCode' of undefined
+                console.log("undefined error: " + filename);
+            } else if (err.response.statusCode === 404) {
+                // console.log(date + "/" + filename + " doesn't exist online");
+            } else {
+                console.log(err);
+            }
+        }
+    } else {
+        // console.log(outputFilePath + " exists already");
+    }
 }
 
 class DustSensor {
@@ -205,7 +191,7 @@ async function getWindSensors() {
 
 async function startWindAPI(sensorsPromise) {
     let sensors = await sensorsPromise;
-    console.log(sensors);
+    // console.log(sensors);
     let windDocumentation = "There are multiple stations:";
 
     app.get('/wind', (req, res) => {
@@ -230,7 +216,7 @@ async function startWindAPI(sensorsPromise) {
         let sensor;
         try {
             sensor = sensors[station].measures[year][month][day][hour][minutes];
-            // somehow necessary because hour: 30 40 50 ... and minutes 2 3 4 ... 200 300 400 all don't throw an error but are undefined
+            // somehow manual throwing necessary because hour: 30 40 50 ... and minutes 2 3 4 ... 200 300 400 all don't throw an error but are undefined
             // couldn't reproduce it with month
             if (sensor === undefined) {
                 throw new Error();
@@ -313,40 +299,44 @@ async function startAPI() {
     const sensorsPromise = getWindSensors();
     startWindAPI(sensorsPromise);
 
-    let outputPath = "../data/dust";
+    let outputPath = "../data/dust/";
     let ids = await getDustSensorIds('48.8,9.2,10');
+    console.log("[" + Object.keys(ids).length + "]: " + Object.keys(ids)); // 1127 before filtering, 575 after
     let sensors = await sensorsPromise; //  necessary so that all wind dates are read, hopefully one can await twice
+
+    // let sensor = sensors[Object.keys(sensors)[0]]; // every sensor has data for the same dates, just take the first
+    let activeDownloads = [];
     for (let key in sensors) {
         let sensor = sensors[key];
         for (let year in sensor.measures) {
-            console.log("year: " + year);
             for (let month in sensor.measures[year]) {
-                let twoDigitMonth; // march is written like 03 but 03 is not defined in months
+                let twoDigitMonth = month; // march is written like 03 but 03 is not defined in months
                 if (month < 10) {
                     twoDigitMonth = "0" + month;
                 }
                 for (let day in sensor.measures[year][month]) {
-                    // this works because it is not used as object key
+                    // this works without twoDigitDay because day is not used as object key
                     if (day < 10) {
                         day = "0" + day;
                     }
                     let date = "" + year + "-" + twoDigitMonth + "-" + day;
-                    for (let id of ids) {
-                        console.log(date + " " + id);
-                        // downloadCSV(date,id,outputPath);
+                    for (let id of Object.keys(ids)) {
+                        // console.log(date + " " + id);
+                        activeDownloads.push(downloadCSV(date, id, outputPath));
                     }
-                    // for (let hour of sensor.measures[year][month][day].keys()){
-                    //     for (let minute of sensor.measures[year][month][day][hour].keys()){
-                    //
-                    //     }
-                    // }
                 }
             }
+            // waiting for one year of data to finish downloading to keep memory usage in place
+            // somehow program doesn't reach this place until all files are downloaded but heap runs out without it. Meh
+            while(activeDownloads.length > 0){
+                let activeDownload = activeDownloads.pop();
+                console.log("waiting for active download");
+                await activeDownload;
+            }
+            console.log("awaited all downloads for " + year);
         }
-
     }
-    downloadCSV("2019-12-31", "553", "../data/dust/");
-    // startDustAPI();
+    startDustAPI();
 
 
     app.get('/', (req, res) => res.send("Wind and Dust Archive API"));
