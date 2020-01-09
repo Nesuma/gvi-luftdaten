@@ -1,7 +1,10 @@
-const express = require('express')
+const express = require('express');
 const fs = require('fs');
-const { promisify } = require('util');
+const {promisify} = require('util');
+const request = require('request');
+const request_promise = require('request-promise-native');
 // const fs = require('fs').promises; // makes file reading work with async / await
+const $ = require('jquery');
 const app = express();
 const port = 3000;
 const readFileAsync = promisify(fs.readFile);
@@ -18,15 +21,37 @@ let directionIndex = 4;
 //https://learnscraping.com/how-to-download-files-with-nodejs-using-request/
 // Sensor 13463
 
-async function downloadCSV(date,filename) {
-    const request = require('request');
+async function getDustSensorIds(area) {
+    let options = {uri: "https://data.sensor.community/airrohr/v1/filter/area=" + area, json: true};
+    let ids = [];
+    let rp = await request_promise(options);
+
+    for (measurment of rp) {
+        ids.push(measurment.sensor.id);
+    }
+    return ids;
+}
+
+let id = [];
+
+function getIds() {
+    $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
+        data.forEach(element => {
+            id.push(element.id)
+        });
+        console.log(id);
+    })
+}
+
+async function downloadCSV(date, sensorId, outputPath) {
+    let filename = date.toString() + "_sds011_sensor_" + sensorId + ".csv";
     /* Create an empty file where we can save data */
-    let file = fs.createWriteStream(filename);
+    let file = fs.createWriteStream(outputPath + filename);
     /* Using Promises so that we can use the ASYNC AWAIT syntax */
     await new Promise((resolve, reject) => {
         let stream = request({
             /* Here you should specify the exact link to the file you are trying to download */
-            uri: 'http://archive.luftdaten.info/'+date+'/'+filename,
+            uri: 'http://archive.luftdaten.info/' + date + '/' + filename,
             headers: {
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Encoding': 'gzip, deflate, br',
@@ -52,8 +77,10 @@ async function downloadCSV(date,filename) {
             console.log(`Something happened: ${error}`);
         });
 }
-class DustSensor{
-    constructor(){}
+
+class DustSensor {
+    constructor() {
+    }
 }
 
 class WindSensor {
@@ -77,7 +104,7 @@ class WindSensor {
         if (this.measures[year][month][day][minutes] === undefined) {
             this.measures[year][month][day][minutes] = {};
         }
-        this.measures[year][month][day][hour][minutes] = { speed: speed, direction: direction };
+        this.measures[year][month][day][hour][minutes] = {speed: speed, direction: direction};
         // console.log(this.measures);
         // console.log("added: " + year + "-" +month+ "-" +day+ "-" +hour+ "-" + minutes + "-" +speed+ "-" +direction)
         // console.log(this.measures[year][month][day][hour][minutes]);
@@ -124,18 +151,6 @@ class WindSensor {
     }
 }
 
-
-function getDustSensorIds() {
-    let id = [];
-    $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
-        data.forEach(element => {
-            id.push(element.id)
-        });
-        // console.log(id);
-    });
-    return id;
-}
-
 function extractSensorId(id) {
     // produkt_ff_stunde_20180707_20200107_04928.txt
     return parseInt(id.substring(id.lastIndexOf("_") + 1, id.indexOf('.')));
@@ -163,7 +178,7 @@ async function getWindSensorData(dataPromise) {
 }
 
 
-async function startWindAPI() {
+async function getWindSensors() {
     let sensors = {};
     const dataPromises = readFiles('../data/wind/');
 
@@ -184,6 +199,12 @@ async function startWindAPI() {
         sensors[numId].storeMeasurements(await sensorPromise);
     }
 
+    console.log(sensors);
+    return sensors;
+}
+
+async function startWindAPI(sensorsPromise) {
+    let sensors = await sensorsPromise;
     console.log(sensors);
     let windDocumentation = "There are multiple stations:";
 
@@ -223,11 +244,11 @@ async function startWindAPI() {
     });
 }
 
-async function getDustSensorData(){
+async function getDustSensorData() {
 
 }
 
-async function startDustAPI(){
+async function startDustAPI() {
     let sensors = {};
 
     // const dataPromises = readFiles('../data/dust/');
@@ -288,15 +309,44 @@ async function startDustAPI(){
     // });
 }
 
-function startAPI() {
-    startWindAPI();
+async function startAPI() {
+    const sensorsPromise = getWindSensors();
+    startWindAPI(sensorsPromise);
 
+    let outputPath = "../data/dust";
+    let ids = await getDustSensorIds('48.8,9.2,10');
+    let sensors = await sensorsPromise; //  necessary so that all wind dates are read, hopefully one can await twice
+    for (let key in sensors) {
+        let sensor = sensors[key];
+        for (let year in sensor.measures) {
+            console.log("year: " + year);
+            for (let month in sensor.measures[year]) {
+                let twoDigitMonth; // march is written like 03 but 03 is not defined in months
+                if (month < 10) {
+                    twoDigitMonth = "0" + month;
+                }
+                for (let day in sensor.measures[year][month]) {
+                    // this works because it is not used as object key
+                    if (day < 10) {
+                        day = "0" + day;
+                    }
+                    let date = "" + year + "-" + twoDigitMonth + "-" + day;
+                    for (let id of ids) {
+                        console.log(date + " " + id);
+                        // downloadCSV(date,id,outputPath);
+                    }
+                    // for (let hour of sensor.measures[year][month][day].keys()){
+                    //     for (let minute of sensor.measures[year][month][day][hour].keys()){
+                    //
+                    //     }
+                    // }
+                }
+            }
+        }
 
-
-    downloadCSV();
-
-    startDustAPI();
-
+    }
+    downloadCSV("2019-12-31", "553", "../data/dust/");
+    // startDustAPI();
 
 
     app.get('/', (req, res) => res.send("Wind and Dust Archive API"));
