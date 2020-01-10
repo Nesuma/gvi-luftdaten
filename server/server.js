@@ -1,7 +1,8 @@
 const express = require('express');
 const fs = require('fs');
-const {promisify} = require('util');
+const { promisify } = require('util');
 const request = require('request');
+const path = require('path')
 const request_promise = require('request-promise-native');
 // const fs = require('fs').promises; // makes file reading work with async / await
 const $ = require('jquery');
@@ -22,7 +23,7 @@ let directionIndex = 4;
 // Sensor 13463
 
 async function getDustSensorIds(area) {
-    let options = {uri: "https://data.sensor.community/airrohr/v1/filter/area=" + area, json: true};
+    let options = { uri: "https://data.sensor.community/airrohr/v1/filter/area=" + area, json: true };
     let ids = {}; // is an object instead of array to prevent duplicates
     let rp = await request_promise(options);
 
@@ -44,17 +45,17 @@ async function downloadCSV(date, sensorId, outputPath) {
         fs.mkdirSync(outputDirectory);
     }
     if (!fs.existsSync(outputFilePath)) {
-        let options = {uri: 'http://archive.luftdaten.info/' + date + '/' + filename, json: true};
+        let options = { uri: 'http://archive.luftdaten.info/' + date + '/' + filename, json: true };
         // GET is what takes so long
         try {
             fs.writeFileSync(outputFilePath, await request_promise(options));
             // console.log("downloaded " + filename);
         } catch (err) {
-            if (err === undefined) {
+            if (err.response === undefined) {
                 // UnhandledPromiseRejectionWarning: TypeError: Cannot read property 'statusCode' of undefined
                 console.log("undefined error: " + filename);
             } else if (err.response.statusCode === 404) {
-                // console.log(date + "/" + filename + " doesn't exist online");
+                 console.log(date + "/" + filename + " doesn't exist online");
             } else {
                 console.log(err);
             }
@@ -90,7 +91,7 @@ class WindSensor {
         if (this.measures[year][month][day][minutes] === undefined) {
             this.measures[year][month][day][minutes] = {};
         }
-        this.measures[year][month][day][hour][minutes] = {speed: speed, direction: direction};
+        this.measures[year][month][day][hour][minutes] = { speed: speed, direction: direction };
         // console.log(this.measures);
         // console.log("added: " + year + "-" +month+ "-" +day+ "-" +hour+ "-" + minutes + "-" +speed+ "-" +direction)
         // console.log(this.measures[year][month][day][hour][minutes]);
@@ -297,7 +298,9 @@ async function startDustAPI() {
 async function startAPI() {
     const sensorsPromise = getWindSensors();
     startWindAPI(sensorsPromise);
-
+    app.get('/', function(req, res) {
+        res.sendFile(path.join(__dirname + '/../index.html'));
+    });
     let outputPath = "../data/dust/";
     let ids = await getDustSensorIds('48.8,9.2,10');
     console.log("[" + Object.keys(ids).length + "]: " + Object.keys(ids)); // 1127 before filtering, 575 after
@@ -327,7 +330,7 @@ async function startAPI() {
             }
             // waiting for one year of data to finish downloading to keep memory usage in place
             // somehow program doesn't reach this place until all files are downloaded but heap runs out without it. Meh
-            while(activeDownloads.length > 0){
+            while (activeDownloads.length > 0) {
                 let activeDownload = activeDownloads.pop();
                 console.log("waiting for active download");
                 await activeDownload;
@@ -336,13 +339,16 @@ async function startAPI() {
         }
     }
     startDustAPI();
-
+    
 
     app.get('/', (req, res) => res.send("Wind and Dust Archive API"));
 
 }
 
+
+
 startAPI();
+
 
 
 //app.get('/air', (req,res) =>{

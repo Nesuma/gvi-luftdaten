@@ -81,6 +81,11 @@
             let control = L.control.layers(background, foreground, { collapsed: false }).addTo(map);
             let dao = new DataObject(20144, 50.814, 6.590, 0.82)
 
+            $.getJSON('http://localhost:3000/wind/4928/2020-1-8-16-20', function (data) {
+                console.log(data);
+                
+            })
+
             loadapi()
             setInterval(function() {
                 loadapi()
