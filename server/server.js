@@ -11,13 +11,6 @@ const readFileAsync = promisify(fs.readFile);
 
 let separator = ';';
 
-
-let dateIndex = 1;
-let speedIndex = 3;
-let directionIndex = 4;
-
-// let sensors = {};
-
 //https://learnscraping.com/how-to-download-files-with-nodejs-using-request/
 // Sensor 13463
 
@@ -64,21 +57,49 @@ async function downloadCSV(date, sensorId, outputPath) {
     }
 }
 
-class DustSensor {
+class Sensor {
     constructor() {
-    }
-}
-
-class WindSensor {
-    constructor(lon, lat, valueOne, valueTwo) {
         this.measures = {};
+    }
+
+    setCoordinates(lon, lat) {
         this.lon = lon;
         this.lat = lat;
-        this.valueOne = valueOne;
-        this.valueTwo = valueTwo
     }
 
-    addDatapoint(year, month, day, hour, minutes, speed, direction) {
+    splitDate(date) {
+        let yearDetail = 4;
+        let monthDetail = 2;
+        let dayDetail = 2;
+        let hourDetail = 2;
+        let minutesDetail = 2;
+
+        let result = {};
+
+        let currentIndex = 0;
+        result.year = parseInt(date.substring(currentIndex, yearDetail));
+        currentIndex += yearDetail;
+
+        result.month = parseInt(date.substring(currentIndex, currentIndex + monthDetail));
+        currentIndex += monthDetail;
+
+        result.day = parseInt(date.substring(currentIndex, currentIndex + dayDetail));
+        currentIndex += dayDetail;
+
+        result.hour = parseInt(date.substring(currentIndex, currentIndex + hourDetail));
+        currentIndex += hourDetail;
+
+        result.minutes = parseInt(date.substring(currentIndex, currentIndex + minutesDetail));
+        return result;
+    }
+
+    addDataPoint(date, dataPoint) {
+        let year = date.year;
+        let month = date.month;
+        let day = date.day;
+        let hour = date.hour;
+        let minutes = date.minutes;
+
         if (this.measures[year] === undefined) {
             this.measures[year] = {};
         }
@@ -95,54 +116,66 @@ class WindSensor {
         if (this.measures[year][month][day][hour][minutes] === undefined) {
             this.measures[year][month][day][hour][minutes] = {};
         }
-        let measurement = {};
-        measurement[this.valueOne] = speed;
-        measurement[this.valueTwo] = direction;
-        measurement["lat"] = this.lat;
-        measurement["lon"] = this.lon;
-        this.measures[year][month][day][hour][minutes] = measurement;
-        // console.log(this.measures);
-        // console.log("added: " + year + "-" +month+ "-" +day+ "-" +hour+ "-" + minutes + "-" +speed+ "-" +direction)
-        // console.log(this.measures[year][month][day][hour][minutes]);
+        this.measures[year][month][day][hour][minutes] = dataPoint;
+    }
+
+    storeMeasurements(content) {
+        throw new Error("Implement this method!");
     }
 
 
+}
+
+class WindSensor extends Sensor {
     storeMeasurements(content) {
-        let yearDetail = 4;
-        let monthDetail = 2;
-        let dayDetail = 2;
-        let hourDetail = 2;
-        let minutesDetail = 2;
+        let dateIndex = 1;
+        let speedIndex = 3;
+        let directionIndex = 4;
 
         for (let line of content) {
-            // console.log("line: " + line);
             let attributes = line.split(separator);
 
             let date = attributes[dateIndex];
             let speed = parseFloat(attributes[speedIndex]);
             let direction = parseInt(attributes[directionIndex]);
 
-            // console.log("date: " + date + " speed: " + speed + " direction: " + direction);
+            let splitDate = this.splitDate(date);
 
-            let currentIndex = 0;
-            let year = parseInt(date.substring(currentIndex, yearDetail));
-            currentIndex += yearDetail;
+            this.addDataPoint({
+                year: splitDate.year, month: splitDate.month,
+                day: splitDate.day, hour: splitDate.hour, minutes: splitDate.minutes
+            }, {speed: speed, direction: direction, lon: this.lon, lat: this.lat});
 
-            let month = parseInt(date.substring(currentIndex, currentIndex + monthDetail));
-            currentIndex += monthDetail;
+        }
+    }
+}
 
-            let day = parseInt(date.substring(currentIndex, currentIndex + dayDetail));
-            currentIndex += dayDetail;
+class DustSensor extends Sensor {
+    storeMeasurements(content) {
+        let latIndex = 3;
+        let lonIndex = 4;
+        let dateIndex = 5;
+        let p10Index = 6;
+        let p2_5Index = 9;
 
-            let hour = parseInt(date.substring(currentIndex, currentIndex + hourDetail));
-            currentIndex += hourDetail;
+        for (let line of content) {
+            let attributes = line.split(separator);
 
-            let minutes = parseInt(date.substring(currentIndex, currentIndex + minutesDetail));
+            let date = attributes[dateIndex];
+            let lon = attributes[lonIndex];
+            let lat = attributes[latIndex];
+            let p10 = attributes[p10Index];
+            let p2_5 = attributes[p2_5Index];
 
-            // console.log("year: " + year+" month: "+month+" day: "+day+" hour: "+hour+" minutes: " + minutes);
+            let splitDate = this.splitDate(date.replace(/[T\-:]/g, "")); // removing T - and :
 
-            this.addDatapoint(year, month, day, hour, minutes, speed, direction);
+            this.addDataPoint({
+                    year: splitDate.year, month: splitDate.month, day: splitDate.day,
+                    hour: splitDate.hour, minutes: splitDate.minutes
+                }, {p1: p10, p2: p2_5, lon: this.lon, lat: this.lat}
+            );
 
+            this.setCoordinates(lon, lat); // is run every time TODO
         }
     }
 }
@@ -182,13 +215,15 @@ function getCoordinates(metadata) {
 
 async function getWindSensors() {
     let sensors = {};
+
+    // async: reading the files from disk
     const measurementPromises = readFiles('../data/wind/measurements/');
     const stationPromises = readFiles('../data/wind/stations/');
 
     let sensorDataPromises = {};
     let sensorCoordinatePromises = {};
-    // console.log("data promises: ");
-    // console.log(dataPromises);
+
+    // async: splitting the files into arrays of lines
     for (const [filename, dataPromise] of Object.entries(measurementPromises)) {
         sensorDataPromises[filename] = getLinesFromFile(dataPromise);
     }
@@ -196,13 +231,14 @@ async function getWindSensors() {
         let numId = extractSensorId(filename);
         sensorCoordinatePromises[numId] = getLinesFromFile(dataPromise);
     }
-    // console.log("sensor promises: ");
-    // console.log(sensorPromises);
+
+    // creating Sensor objects with the arrays of data lines
     for (const [filename, sensorPromise] of Object.entries(sensorDataPromises)) {
         let numId = extractSensorId(filename);
         if (sensors[numId] === undefined) {
             let coordinates = getCoordinates(await sensorCoordinatePromises[numId]);
-            sensors[numId] = new WindSensor(coordinates.lon, coordinates.lat, "speed", "direction");
+            sensors[numId] = new WindSensor();
+            sensors[numId].setCoordinates(coordinates.lon, coordinates.lat);
         }
         sensors[numId].storeMeasurements(await sensorPromise);
     }
@@ -210,22 +246,50 @@ async function getWindSensors() {
     return sensors;
 }
 
-async function startWindAPI(sensorsPromise) {
+async function getDustSensors(rootDir) {
+    let sensors = {};
+
+    // async: reading the files stored in subdirectories from disk
+    let dirNames = fs.readdirSync(rootDir);
+    let filePromises = {};
+    for (let dir of dirNames) {
+        let temp = readFiles(rootDir + dir + "/");
+        filePromises = {...filePromises, ...temp}; // merging all file paths
+    }
+    // async: splitting the files into arrays of lines
+    let sensorDataPromises = {};
+    for (const [filename, dataPromise] of Object.entries(filePromises)) {
+        sensorDataPromises[filename] = getLinesFromFile(dataPromise);
+    }
+
+    // creating Sensor objects with the arrays of data lines
+    for (const [filename, sensorPromise] of Object.entries(sensorDataPromises)) {
+        let numId = extractSensorId(filename);
+        if (sensors[numId] === undefined) {
+            sensors[numId] = new DustSensor();
+        }
+        sensors[numId].storeMeasurements(await sensorPromise);
+    }
+    // console.log(sensors);
+    return sensors;
+}
+
+async function startAPI(sensorsPromise,type) {
     let sensors = await sensorsPromise;
     // console.log(sensors);
-    let windDocumentation = "There are multiple stations:";
+    let doc = "There are multiple stations: ";
 
     app.get('/wind', (req, res) => {
-        let doc = windDocumentation;
+        let stations = "";
         for (const [key, value] of Object.entries(sensors)) {
-            doc += "\n" + key;
+            stations += "\n" + key;
         }
-        res.send(doc);
+        res.send(doc + stations);
     });
-    app.get('/wind/:stationId', (req, res) => {
-        res.send("Ask like this: http://localhost:3000/wind/4928/2020-1-8-16-20");
+    app.get('/'+type+'/:stationId', (req, res) => {
+        res.send("Ask like this: http://localhost:3000/"+type+"/4928/2020-1-8-16-20");
     });
-    app.get('/wind/:stationId/:year-:month-:day-:hour-:minutes', (req, res) => {
+    app.get('/'+type+'/:stationId/:year-:month-:day-:hour-:minutes', (req, res) => {
         station = req.params['stationId'];
         year = req.params['year'];
         month = req.params['month'];
@@ -249,21 +313,15 @@ async function startWindAPI(sensorsPromise) {
     });
 }
 
-async function getDustSensors() {
-    const dataPromises = readFiles("../data/dust/*/")
-}
-
-async function startDustAPI(sensorsPromise,sensorArea) {
-    await downloadDustFiles(sensorsPromise, sensorArea);
-
+async function startDustAPI(sensorsPromise, sensorArea, dirName) {
+    // await ;
+    getDustSensors(dirName);
 
 
 }
 
-async function downloadDustFiles(sensorsPromise, sensorArea) {
+async function downloadDustFiles(sensorsPromise, sensorArea,outputPath) {
     let sensors;
-
-    let outputPath = "../data/dust/";
     let ids = await getDustSensorIds(sensorArea);
     console.log("[" + Object.keys(ids).length + "]: " + Object.keys(ids)); // 1127 before filtering, 575 after
     sensors = await sensorsPromise; //  necessary so that all wind dates are read, hopefully one can await twice
@@ -301,16 +359,21 @@ async function downloadDustFiles(sensorsPromise, sensorArea) {
     }
 }
 
-async function startAPI() {
-    const sensorsPromise = getWindSensors();
-    startWindAPI(sensorsPromise);
+async function startAPIS() {
+    const windSensorsPromise = getWindSensors();
+    const dustSensorPromise = getDustSensors("../data/dust/");
+    // const dustDownloadPromise = downloadDustFiles(windSensorsPromise,"48.8,9.2,10", "../data/dust/");
 
-    startDustAPI(sensorsPromise,"48.8,9.2,10");
+    startAPI(windSensorsPromise,"wind");
+
+    // startAPI(dustSensorPromise,"dust");
 
     app.get('/', (req, res) => res.send("Wind and Dust Archive API"));
 
+    // await dustDownloadPromise;
+    // startAPI(sensorsPromise,"dust"); // update when all files are downloaded
 }
 
-startAPI();
+startAPIS();
 
 app.listen(port, () => console.log(`Example on port ${port}`));
