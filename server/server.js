@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const { promisify } = require('util');
-const request = require('request');
+//const request = require('request');
 const path = require('path')
 const request_promise = require('request-promise-native');
 // const fs = require('fs').promises; // makes file reading work with async / await
@@ -11,7 +11,6 @@ const port = 3000;
 const readFileAsync = promisify(fs.readFile);
 
 let separator = ';';
-
 
 let dateIndex = 1;
 let speedIndex = 3;
@@ -132,7 +131,6 @@ class WindSensor {
             // console.log("year: " + year+" month: "+month+" day: "+day+" hour: "+hour+" minutes: " + minutes);
 
             this.addDatapoint(year, month, day, hour, minutes, speed, direction);
-
         }
     }
 }
@@ -143,7 +141,6 @@ function extractSensorId(id) {
 }
 
 function readFiles(dirname) {
-
     let filenames = fs.readdirSync(dirname); // collects file names in directory (sync)
     let dataPromises = {};
     for (let filename of filenames) {
@@ -162,7 +159,6 @@ async function getWindSensorData(dataPromise) {
     return content.split("\n");
     // console.log(sensor);
 }
-
 
 async function getWindSensors() {
     let sensors = {};
@@ -207,12 +203,12 @@ async function startWindAPI(sensorsPromise) {
     });
 
     app.get('/wind/:stationId/:year-:month-:day-:hour-:minutes', (req, res) => {
-        station = req.params['stationId'];
-        year = req.params['year'];
-        month = req.params['month'];
-        day = req.params['day'];
-        hour = req.params['hour'];
-        minutes = req.params['minutes'];
+        let station = req.params['stationId'];
+        let year = req.params['year'];
+        let month = req.params['month'];
+        let day = req.params['day'];
+        let hour = req.params['hour'];
+        let minutes = req.params['minutes'];
         let sensor;
         try {
             sensor = sensors[station].measures[year][month][day][hour][minutes];
@@ -299,7 +295,8 @@ async function startAPI() {
     const sensorsPromise = getWindSensors();
     startWindAPI(sensorsPromise);
     app.get('/', function(req, res) {
-        res.sendFile(path.join(__dirname + '/../index.html'));
+        res.sendFile(path.join(__dirname, '/../index.html'));
+
     });
     let outputPath = "../data/dust/";
     let ids = await getDustSensorIds('48.8,9.2,10');
@@ -340,19 +337,10 @@ async function startAPI() {
     }
     startDustAPI();
     
-
     app.get('/', (req, res) => res.send("Wind and Dust Archive API"));
-
 }
-
-
-
 startAPI();
-
-
-
 //app.get('/air', (req,res) =>{
-
 //}
 
 app.listen(port, () => console.log(`Example on port ${port}`));
