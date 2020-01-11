@@ -154,8 +154,8 @@ class WindSensor extends Sensor {
     }
 }
 
-function roundToTen(minutes) {
-    return (Math.round(minutes / 10)) * 10;
+function floorToTen(minutes) {
+    return (Math.floor(minutes / 10)) * 10;
 }
 
 class DustSensor extends Sensor {
@@ -178,9 +178,11 @@ class DustSensor extends Sensor {
             let splitDate = this.splitDate(date.replace(/[T\-:]/g, "")); // removing T - and :
 
             this.setCoordinates(lon, lat); // is run every time TODO
+
+            // floorToTen necessary so that only values for minute 0,10,20,... are stored
             this.addDataPoint({
                     year: splitDate.year, month: splitDate.month, day: splitDate.day,
-                    hour: splitDate.hour, minutes: roundToTen(splitDate.minutes)
+                    hour: splitDate.hour, minutes: floorToTen(splitDate.minutes)
                 }, {p1: p10, p2: p2_5, lon: this.lon, lat: this.lat}
             );
 
@@ -235,12 +237,12 @@ function getCoordinates(metadata) {
     return {lat: lat, lon: lon};
 }
 
-async function getWindSensors(measurementPath,stationsPath) {
+async function getWindSensors() {
     let sensors = {};
 
     // async: reading the files from disk
-    const measurementPromises = readFilesRecursively(measurementPath);
-    const stationPromises = readFilesRecursively(stationsPath);
+    const measurementPromises = readFilesRecursively("../data/wind/measurements/");
+    const stationPromises = readFilesRecursively('../data/wind/stations/');
 
     let sensorDataPromises = {};
     let sensorCoordinatePromises = {};
@@ -268,32 +270,30 @@ async function getWindSensors(measurementPath,stationsPath) {
     return sensors;
 }
 
-async function getDustSensors(rootDir) {
+async function getDustSensors(dir) {
     let sensors = {};
 
-    // async: reading the files stored in subdirectories from disk
-    let dirNames = fs.readdirSync(rootDir);
-    for (let dir of dirNames) {
-        let filePromises = readFiles(rootDir + dir + "/");
-        let sensorDataPromises = {};
-        for (const [filename, dataPromise] of Object.entries(filePromises)) {
-            sensorDataPromises[filename] = getLinesFromFile(dataPromise);
-        }
-
-        // creating Sensor objects with the arrays of data lines
-        for (const [filename, sensorPromise] of Object.entries(sensorDataPromises)) {
-            let numId = extractSensorId(filename);
-            if (sensors[numId] === undefined) {
-                sensors[numId] = new DustSensor();
-            }
-            sensors[numId].storeMeasurements(await sensorPromise);
-        }
-        console.log("finished " + dir);
+    // async: reading the files stored in directories from disk
+    let filePromises = readFilesRecursively(dir);
+    let sensorDataPromises = {};
+    for (const [filename, dataPromise] of Object.entries(filePromises)) {
+        sensorDataPromises[filename] = getLinesFromFile(dataPromise);
     }
+
+    // creating sensor objects with the arrays of data lines
+    for (const [filename, sensorPromise] of Object.entries(sensorDataPromises)) {
+        let numId = extractSensorId(filename);
+        if (sensors[numId] === undefined) {
+            sensors[numId] = new DustSensor();
+        }
+        sensors[numId].storeMeasurements(await sensorPromise);
+    }
+    console.log("finished " + dir);
     return sensors;
 }
 
-async function startAPI(sensorsPromise, type) {
+async function startWindAPI(sensorsPromise) {
+    let type = "wind";
     let sensors = await sensorsPromise;
     // console.log(sensors);
     console.log("starting " + type + " api");
@@ -318,8 +318,6 @@ async function startAPI(sensorsPromise, type) {
         let minutes = req.params['minutes'];
         let sensor;
         try {
-            console.log("test" + month);
-            console.log(sensors[station].measures[year][month]);
             sensor = sensors[station].measures[year][month][day][hour][minutes];
             // somehow manual throwing necessary because hour: 30 40 50 ... and minutes 2 3 4 ... 200 300 400 all don't throw an error but are undefined
             // couldn't reproduce it with month
@@ -335,11 +333,73 @@ async function startAPI(sensorsPromise, type) {
     });
 }
 
-async function downloadDustFiles(sensorsPromise, sensorArea, outputPath) {
+// async function startDustAPI(dustIDs, sensors) {
+async function startDustAPI(dustIDs) {
+    let type = "dust";
+    // console.log(sensors);
+    console.log("starting " + type + " api");
+    let doc = "There are multiple stations: ";
+
+    app.get('/' + type, (req, res) => {
+        let stations = "";
+        for (const [key, value] of Object.entries(dustIDs)) {
+            stations += "\n" + key;
+        }
+        res.send(doc + stations);
+    });
+    app.get('/' + type + '/:stationId', (req, res) => {
+        res.send("Ask like this: http://localhost:3000/" + type + "/140/2020-1-8-16-20");
+    });
+    app.get('/' + type + '/:stationId/:year-:month-:day-:hour-:minutes', async (req, res) => {
+        let station = req.params['stationId'];
+        let year = req.params['year'];
+        let month = req.params['month'];
+        let day = req.params['day'];
+        let hour = req.params['hour'];
+        let minutes = req.params['minutes'];
+
+        let queriedSensors = await getDustSensors("../data/dust/" + year + "-" + prefixZeros(month) + "-" + prefixZeros(day) + "/");
+        let sensor;
+        // if sensor doesn't exist disk is checked for data, if it still doesn't exist return error
+        try {
+            sensor = queriedSensors[station].measures[year][month][day][hour][minutes];
+            // somehow manual throwing necessary because hour: 30 40 50 ... and minutes 2 3 4 ... 200 300 400 all don't throw an error but are undefined
+            // couldn't reproduce it with month
+            if (sensor === undefined) {
+                throw new Error();
+            }
+        } catch (err) {
+            res.status(404);
+            res.send("Station " + station + " or date [" + day + "." + month + "." + year + " " + hour + ":" + minutes + "] unknown");
+        }
+
+        res.send(sensor);
+    });
+
+    app.get("/" + type + "/all/:year-:month-:day", async (req, res) => {
+        let year = req.params['year'];
+        let month = req.params['month'];
+        let day = req.params['day'];
+
+        let queriedSensors = await getDustSensors("../data/dust/" + year + "-" + prefixZeros(month) + "-" + prefixZeros(day) + "/");
+
+        let result = {};
+        for (const [id, sensor] of Object.entries(queriedSensors)) {
+            console.log(sensor);
+            result[id] = sensor.measures[year][month][day];
+        }
+        res.send(result);
+    })
+}
+
+function prefixZeros(number) {
+    return (number < 10) ? "0" + number : number;
+}
+
+async function downloadDustFiles(sensorsPromise, dustIDs, outputPath) {
     let sensors;
-    let ids = await getDustSensorIds(sensorArea);
-    console.log("[" + Object.keys(ids).length + "]: " + Object.keys(ids)); // 1127 before filtering, 575 after
-    sensors = await sensorsPromise; //  necessary so that all wind dates are read, hopefully one can await twice
+    console.log("[" + Object.keys(dustIDs).length + "]: " + Object.keys(dustIDs));
+    sensors = await sensorsPromise; //  necessary so that all wind dates are read
 
     // let sensor = sensors[Object.keys(sensors)[0]]; // every sensor has data for the same dates, just take the first
     let activeDownloads = [];
@@ -357,12 +417,12 @@ async function downloadDustFiles(sensorsPromise, sensorArea, outputPath) {
                         day = "0" + day;
                     }
                     let date = "" + year + "-" + twoDigitMonth + "-" + day;
-                    for (let id of Object.keys(ids)) {
+                    for (let id of Object.keys(dustIDs)) {
                         // console.log(date + " " + id);
                         activeDownloads.push(downloadCSV(date, id, outputPath));
                     }
                 }
-                if (activeDownloads.length > (365 * Object.keys(ids).length)) {
+                if (activeDownloads.length > (365 * Object.keys(dustIDs).length)) {
                     while (activeDownloads.length > 0) {
                         let activeDownload = activeDownloads.shift();
                         await activeDownload;
@@ -376,15 +436,17 @@ async function downloadDustFiles(sensorsPromise, sensorArea, outputPath) {
 
 async function startAPIS() {
     // alle windsensoren holen damit die ids gelistet werden können
-    const windSensorsPromise = getWindSensors("../data/wind/measurements/",'../data/wind/stations/');
-    let dustSensors = {};
-    let windSensors = {};
-    // const dustSensorPromise = getDustSensors("../data/dust/");
-    // const dustDownloadPromise = downloadDustFiles(windSensorsPromise,"48.8,9.2,10", "../data/dust/");
+    const windSensorsPromise = getWindSensors();
+    let dustIDs = await getDustSensorIds("48.8,9.2,10");
 
-    startAPI(windSensorsPromise, "wind");
+    // const dustSensorPromise = getDustSensors();
+    const dustDownloadPromise = downloadDustFiles(windSensorsPromise, dustIDs, "../data/dust/");
 
-    // startAPI(dustSensorPromise,"dust");
+    // let dustSensors = {};
+
+    startWindAPI(windSensorsPromise);
+    // startDustAPI(dustIDs, dustSensors);
+    startDustAPI(dustIDs);
 
     app.get('/', (req, res) => res.send("Wind and Dust Archive API"));
 
