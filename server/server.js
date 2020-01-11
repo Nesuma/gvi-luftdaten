@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const {promisify} = require('util');
 const request = require('request');
+const path = require('path');
 const request_promise = require('request-promise-native');
 // const fs = require('fs').promises; // makes file reading work with async / await
 const $ = require('jquery');
@@ -153,8 +154,8 @@ class WindSensor extends Sensor {
     }
 }
 
-function roundToTen(minutes){
-    return (Math.round(minutes/10))*10;
+function roundToTen(minutes) {
+    return (Math.round(minutes / 10)) * 10;
 }
 
 class DustSensor extends Sensor {
@@ -192,6 +193,20 @@ function extractSensorId(id) {
     return parseInt(id.substring(id.lastIndexOf("_") + 1, id.indexOf('.')));
 }
 
+function readFilesRecursively(dirName, files) {
+    let fileNames = fs.readdirSync(dirName);
+    files = files || {};
+
+    for (let filename of fileNames) {
+        if (fs.statSync(dirName + "/" + filename).isDirectory()) {
+            files = getAllFiles(dirName + "/" + filename, files)
+        } else {
+            files[filename] = readFileAsync(dirName + filename, 'utf-8'); // async read call returns promise
+        }
+    }
+    return files;
+}
+
 function readFiles(dirname) {
     let filenames = fs.readdirSync(dirname); // collects file names in directory (sync)
     let dataPromises = {};
@@ -220,12 +235,12 @@ function getCoordinates(metadata) {
     return {lat: lat, lon: lon};
 }
 
-async function getWindSensors() {
+async function getWindSensors(measurementPath) {
     let sensors = {};
 
     // async: reading the files from disk
-    const measurementPromises = readFiles('../data/wind/measurements/');
-    const stationPromises = readFiles('../data/wind/stations/');
+    const measurementPromises = readFilesRecursively('../data/wind/measurements/');
+    const stationPromises = readFilesRecursively('../data/wind/stations/');
 
     let sensorDataPromises = {};
     let sensorCoordinatePromises = {};
@@ -281,10 +296,10 @@ async function getDustSensors(rootDir) {
 async function startAPI(sensorsPromise, type) {
     let sensors = await sensorsPromise;
     // console.log(sensors);
-    console.log("starting " +type+" api");
+    console.log("starting " + type + " api");
     let doc = "There are multiple stations: ";
 
-    app.get('/'+type, (req, res) => {
+    app.get('/' + type, (req, res) => {
         let stations = "";
         for (const [key, value] of Object.entries(sensors)) {
             stations += "\n" + key;
@@ -318,13 +333,6 @@ async function startAPI(sensorsPromise, type) {
 
         res.send(sensor);
     });
-}
-
-async function startDustAPI(sensorsPromise, sensorArea, dirName) {
-    // await ;
-    getDustSensors(dirName);
-
-
 }
 
 async function downloadDustFiles(sensorsPromise, sensorArea, outputPath) {
@@ -367,18 +375,21 @@ async function downloadDustFiles(sensorsPromise, sensorArea, outputPath) {
 }
 
 async function startAPIS() {
-    const windSensorsPromise = getWindSensors();
-    const dustSensorPromise = getDustSensors("../data/dust/");
-    const dustDownloadPromise = downloadDustFiles(windSensorsPromise,"48.8,9.2,10", "../data/dust/");
+    // alle windsensoren holen damit die ids gelistet werden können
+    const windSensorsPromise = getWindSensors("/../data/wind/");
+    let dustSensors = {};
+    let windSensors = {};
+    // const dustSensorPromise = getDustSensors("../data/dust/");
+    // const dustDownloadPromise = downloadDustFiles(windSensorsPromise,"48.8,9.2,10", "../data/dust/");
 
     startAPI(windSensorsPromise, "wind");
 
-    startAPI(dustSensorPromise,"dust");
+    // startAPI(dustSensorPromise,"dust");
 
     app.get('/', (req, res) => res.send("Wind and Dust Archive API"));
 
-    await dustDownloadPromise;
-    startAPI(sensorsPromise,"dust"); // update when all files are downloaded
+    // await dustDownloadPromise;
+    // startAPI(sensorsPromise,"dust"); // update when all files are downloaded
 }
 
 startAPIS();
