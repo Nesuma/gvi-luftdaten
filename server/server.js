@@ -235,12 +235,12 @@ function getCoordinates(metadata) {
     return {lat: lat, lon: lon};
 }
 
-async function getWindSensors(measurementPath) {
+async function getWindSensors(measurementPath,stationsPath) {
     let sensors = {};
 
     // async: reading the files from disk
-    const measurementPromises = readFilesRecursively('../data/wind/measurements/');
-    const stationPromises = readFilesRecursively('../data/wind/stations/');
+    const measurementPromises = readFilesRecursively(measurementPath);
+    const stationPromises = readFilesRecursively(stationsPath);
 
     let sensorDataPromises = {};
     let sensorCoordinatePromises = {};
@@ -376,7 +376,7 @@ async function downloadDustFiles(sensorsPromise, sensorArea, outputPath) {
 
 async function startAPIS() {
     // alle windsensoren holen damit die ids gelistet werden können
-    const windSensorsPromise = getWindSensors("/../data/wind/");
+    const windSensorsPromise = getWindSensors("../data/wind/measurements/",'../data/wind/stations/');
     let dustSensors = {};
     let windSensors = {};
     // const dustSensorPromise = getDustSensors("../data/dust/");
