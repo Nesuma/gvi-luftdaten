@@ -3,6 +3,7 @@
 *.txt
 *.zip
 *.sh
+sandbox*
 
 #Mac
 .DS_Store
