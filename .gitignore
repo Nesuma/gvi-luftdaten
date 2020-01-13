@@ -1,5 +1,5 @@
 # data
-dust/*
+**/dust
 *.txt
 *.zip
 *.sh
