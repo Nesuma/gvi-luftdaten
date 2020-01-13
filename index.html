@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <title>Leaflet</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css"
+        integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
+        crossorigin="" />
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        .legend {
+            line-height: 18px;
+            color: #555;
+            background-color: #ffffff;
+            border-style: solid;
+            border-color: black;
+            border-width: 1px;
+        }
+
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 1;
+        }
+
+        #map_canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body onload="initialize()">
+    <div id="map_canvas"></div>
+    <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
+        integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
+        crossorigin=""></script>
+    <script src="leaflet.rotatedMarker.js"></script>
+    <link rel="stylesheet" href="dist/wind-js-leaflet.css" />
+    <link rel="stylesheet" href="/demo/demo.css" />
+    <script src="/dist/wind-js-leaflet.js"></script>
+    <script>
+        const geocodeUrl = 'https://nominatim.openstreetmap.org/search?q=';
+        const geocodeParams = '&format=json&limit=1';
+        let map = null;
+
+        let windIcon = L.icon({
+            iconUrl: 'images/wind.png',
+            iconSize: [100, 100], // size of the icon
+            iconAnchor: [0, 32],
+            popupAnchor: [0, -32]
+        });
+
+        let windIcon2 = L.icon({
+            iconUrl: 'images/wind-direction.png',
+            iconSize: [100, 100], // size of the icon
+            iconAnchor: [0, 32],
+            popupAnchor: [0, -32]
+        });
+
+        function DataObject(id, lat, lon, dust) {
+            this.id = id
+            this.lat = lat
+            this.lon = lon
+            this.dust = dust
+        }
+        let dustsensors;
+
+        function initialize() {
+            var Esri_WorldImagery = L.tileLayer(
+                "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                {
+                    attribution:
+                        "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, " +
+                        "AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+                }
+            );
+
+            let center = L.latLng(48.8, 9.2);
+            let zoom = 11;
+            map = L.map('map_canvas').setView(center, zoom);
+            let osm = new L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+                minZoom: 2,
+                maxZoom: 18
+            });
+            map.addLayer(osm);
+            dustsensors = L.layerGroup().addTo(map);
+
+            let background = { "Clear map": osm, Satellite: Esri_WorldImagery };
+            let foreground = { "Feinstaubsensoren": dustsensors };
+            let layerControl = L.control.layers(background, foreground, { collapsed: false }).addTo(map);
+            let dao = new DataObject(20144, 50.814, 6.590, 0.82)
+/*
+            $.getJSON('http://localhost:3000/wind/4928/2020-1-8-16-20', function (data) {
+                console.log(data);
+
+            })
+
+            L.marker([48.73, 9.2], {
+                rotationAngle: 45,
+                icon: windIcon
+            }).addTo(map);
+*/
+            loadapi()
+            setInterval(function () {
+                loadapi()
+            }, 300000)
+
+            var handleError = function (err) {
+                console.log('handleError...');
+                console.log(err);
+            };
+
+            WindJSLeaflet.init({
+                localMode: true,
+                map: map,
+                layerControl: layerControl,
+                useNearest: false,
+                timeISO: null,
+                nearestDaysLimit: 7,
+                displayValues: true,
+                displayOptions: {
+                    displayPosition: 'bottomleft',
+                    displayEmptyString: 'No wind data'
+                },
+                overlayName: 'wind',
+                errorCallback: handleError
+            });
+
+        }
+
+        function loadapi() {
+            $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
+                console.log(data);
+
+                data.forEach(element => {
+                    let marker = L.marker([element.location.latitude, element.location.longitude]).addTo(dustsensors);
+                    if (marker !== undefined) {
+                        marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + element.timestamp);
+                    }
+                });
+
+            })
+        }
+
+
+
+
+    </script>
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous">
+        </script>
+</body>
+
+</html>

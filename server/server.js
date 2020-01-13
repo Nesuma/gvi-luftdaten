@@ -1,8 +1,8 @@
 const express = require('express');
 const fs = require('fs');
-const {promisify} = require('util');
-const request = require('request');
-const path = require('path');
+const { promisify } = require('util');
+//const request = require('request');
+const path = require('path')
 const request_promise = require('request-promise-native');
 // const fs = require('fs').promises; // makes file reading work with async / await
 const $ = require('jquery');
@@ -12,11 +12,13 @@ const readFileAsync = promisify(fs.readFile);
 
 let separator = ';';
 
+let dateIndex = 1;
+
 //https://learnscraping.com/how-to-download-files-with-nodejs-using-request/
 // Sensor 13463
 
 async function getDustSensorIds(area) {
-    let options = {uri: "https://data.sensor.community/airrohr/v1/filter/area=" + area, json: true};
+    let options = { uri: "https://data.sensor.community/airrohr/v1/filter/area=" + area, json: true };
     let ids = {}; // is an object instead of array to prevent duplicates
     let rp = await request_promise(options);
 
@@ -38,7 +40,7 @@ async function downloadCSV(date, sensorId, outputPath) {
         fs.mkdirSync(outputDirectory);
     }
     if (!fs.existsSync(outputFilePath)) {
-        let options = {uri: 'http://archive.luftdaten.info/' + date + '/' + filename, json: true};
+        let options = { uri: 'http://archive.luftdaten.info/' + date + '/' + filename, json: true };
         // GET is what takes so long
         try {
             fs.writeFileSync(outputFilePath, await request_promise(options));
@@ -48,7 +50,7 @@ async function downloadCSV(date, sensorId, outputPath) {
                 // UnhandledPromiseRejectionWarning: TypeError: Cannot read property 'statusCode' of undefined
                 // console.log("undefined error: " + filename);
             } else if (err.response.statusCode === 404) {
-                // console.log(date + "/" + filename + " doesn't exist online");
+                 console.log(date + "/" + filename + " doesn't exist online");
             } else {
                 console.log(err);
             }
@@ -436,6 +438,11 @@ async function downloadDustFiles(sensorsPromise, dustIDs, outputPath) {
 
 async function startAPIS() {
     // alle windsensoren holen damit die ids gelistet werden können
+    app.get('/', function(req, res) {
+        res.sendFile(path.join(__dirname, '/../index.html'));
+
+    });
+
     const windSensorsPromise = getWindSensors();
     let dustIDs = await getDustSensorIds("48.8,9.2,10");
 

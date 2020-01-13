@@ -1,9 +1,11 @@
 # data
-**/dust
 *.txt
 *.zip
 *.sh
 sandbox*
+*data
+*data.csv
+*.DS_Store
 
 #Mac
 .DS_Store
