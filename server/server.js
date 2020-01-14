@@ -1,6 +1,6 @@
 const express = require('express');
 const fs = require('fs');
-const { promisify } = require('util');
+const {promisify} = require('util');
 //const request = require('request');
 const path = require('path')
 const request_promise = require('request-promise-native');
@@ -18,7 +18,7 @@ let dateIndex = 1;
 // Sensor 13463
 
 async function getDustSensorIds(area) {
-    let options = { uri: "https://data.sensor.community/airrohr/v1/filter/area=" + area, json: true };
+    let options = {uri: "https://data.sensor.community/airrohr/v1/filter/area=" + area, json: true};
     let ids = {}; // is an object instead of array to prevent duplicates
     let rp = await request_promise(options);
 
@@ -40,7 +40,7 @@ async function downloadCSV(date, sensorId, outputPath) {
         fs.mkdirSync(outputDirectory);
     }
     if (!fs.existsSync(outputFilePath)) {
-        let options = { uri: 'http://archive.luftdaten.info/' + date + '/' + filename, json: true };
+        let options = {uri: 'http://archive.luftdaten.info/' + date + '/' + filename, json: true};
         // GET is what takes so long
         try {
             fs.writeFileSync(outputFilePath, await request_promise(options));
@@ -50,7 +50,7 @@ async function downloadCSV(date, sensorId, outputPath) {
                 // UnhandledPromiseRejectionWarning: TypeError: Cannot read property 'statusCode' of undefined
                 // console.log("undefined error: " + filename);
             } else if (err.response.statusCode === 404) {
-                 console.log(date + "/" + filename + " doesn't exist online");
+                console.log(date + "/" + filename + " doesn't exist online");
             } else {
                 console.log(err);
             }
@@ -268,7 +268,6 @@ async function getWindSensors() {
         }
         sensors[numId].storeMeasurements(await sensorPromise);
     }
-    console.log(sensors);
     return sensors;
 }
 
@@ -335,6 +334,32 @@ async function startWindAPI(sensorsPromise) {
     });
 }
 
+async function startStaticFileAPI() {
+    app.get("/landkreis", async (req, res) => {
+        res.sendFile(path.join(__dirname, "../data/shapes/utm32.json"));
+        // let shapefiles = await readFilesRecursively("../data/shapes/");
+        // console.log(shapefiles);
+        // for (let shapefile in shapefiles) {
+        //     res.send((JSON.parse(await shapefiles[shapefile])));
+        // }
+    });
+    app.get("/leaflet.rotatedMarker.js", (req,res) => {
+        res.sendFile(path.join(__dirname, "../leaflet.rotatedMarker.js"));
+    });
+    // app.get("/dist/wind-js-leaflet.css", (req,res) => {
+    //     res.sendFile(path.join(__dirname, "../dist/wind-js-leaflet.css"));
+    // });
+    app.get("/demo/demo.css", (req,res) => {
+        res.sendFile(path.join(__dirname, "../demo/demo.css"));
+    });
+    // app.get("/dist/wind-js-leaflet.js", (req,res) => {
+    //     res.sendFile(path.join(__dirname, "../dist/wind-js-leaflet.js"));
+    // });
+    app.get("/proj4leaflet.js", (req,res) => {
+        res.sendFile(path.join(__dirname, "../proj4leaflet.js"));
+    });
+}
+
 // async function startDustAPI(dustIDs, sensors) {
 async function startDustAPI(dustIDs) {
     let type = "dust";
@@ -387,6 +412,7 @@ async function startDustAPI(dustIDs) {
 
         let result = {};
         for (const [id, sensor] of Object.entries(queriedSensors)) {
+            console.log("id: " + id);
             console.log(sensor);
             result[id] = sensor.measures[year][month][day];
         }
@@ -438,22 +464,24 @@ async function downloadDustFiles(sensorsPromise, dustIDs, outputPath) {
 
 async function startAPIS() {
     // alle windsensoren holen damit die ids gelistet werden können
-    app.get('/', function(req, res) {
+    app.get('/', function (req, res) {
         res.sendFile(path.join(__dirname, '/../index.html'));
 
     });
 
     const windSensorsPromise = getWindSensors();
-    let dustIDs = await getDustSensorIds("48.8,9.2,10");
+    let dustIDs = await getDustSensorIds("48.774,9.174,10");
 
     // const dustSensorPromise = getDustSensors();
     const dustDownloadPromise = downloadDustFiles(windSensorsPromise, dustIDs, "../data/dust/");
 
     // let dustSensors = {};
+    startStaticFileAPI();
 
     startWindAPI(windSensorsPromise);
     // startDustAPI(dustIDs, dustSensors);
     startDustAPI(dustIDs);
+
 
     app.get('/', (req, res) => res.send("Wind and Dust Archive API"));
 
