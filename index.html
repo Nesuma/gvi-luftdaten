@@ -99,49 +99,55 @@
                 maxZoom: 18
             });
             map.addLayer(osm);
-            dustsensors = L.layerGroup().addTo(map);
+            dustsensors = L.layerGroup();
 
             let background = { "Clear map": osm, Satellite: Esri_WorldImagery };
             let foreground = { "Feinstaubsensoren": dustsensors };
             let layerControl = L.control.layers(background, foreground, { collapsed: false }).addTo(map);
             let dao = new DataObject(20144, 50.814, 6.590, 0.82)
-/*
-            $.getJSON('http://localhost:3000/wind/4928/2020-1-8-16-20', function (data) {
-                console.log(data);
-
-            })
-
-            L.marker([48.73, 9.2], {
-                rotationAngle: 45,
-                icon: windIcon
-            }).addTo(map);
-*/
+            /*
+                        $.getJSON('http://localhost:3000/wind/4928/2020-1-8-16-20', function (data) {
+                            console.log(data);
+            
+                        })
+            
+                        L.marker([48.73, 9.2], {
+                            rotationAngle: 45,
+                            icon: windIcon
+                        }).addTo(map);
+            */
             loadapi()
             setInterval(function () {
                 loadapi()
             }, 300000)
 
+            setupWindApi(layerControl);
+        }
+
+        function setupWindApi(layerControl) {
             var handleError = function (err) {
                 console.log('handleError...');
                 console.log(err);
             };
 
             WindJSLeaflet.init({
-                localMode: true,
+                localMode: false,
                 map: map,
                 layerControl: layerControl,
-                useNearest: false,
-                timeISO: null,
-                nearestDaysLimit: 7,
+                useNearest: true, //nearest to Time
+                timeISO: null, //=currentTime
+                nearestDaysLimit: 3,
                 displayValues: true,
                 displayOptions: {
                     displayPosition: 'bottomleft',
                     displayEmptyString: 'No wind data'
                 },
-                overlayName: 'wind',
+                overlayName: 'Wind',
+                pingUrl: 'http://localhost:7000/alive',        // url to check service availability
+                latestUrl: 'http://localhost:7000/latest',     // url to get latest data with no required params   
+                nearestUrl: 'http://localhost:7000/nearest',
                 errorCallback: handleError
             });
-
         }
 
         function loadapi() {
