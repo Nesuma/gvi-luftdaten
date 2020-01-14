@@ -2,12 +2,12 @@
 <html>
 
 <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
     <title>Leaflet</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css"
-        integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
-        crossorigin="" />
+          integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
+          crossorigin=""/>
     <style>
         html,
         body {
@@ -45,127 +45,247 @@
 </head>
 
 <body onload="initialize()">
-    <div id="map_canvas"></div>
-    <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
+<!--<canvas id="myCanvas" width="5000" height="3000" style="border:1px solid #d3d3d3;">
+    Your browser does not support the HTML5 canvas tag.</canvas>-->
+<div id="map_canvas"></div>
+
+<script src="https://unpkg.com/d3-delaunay@5.1.6/dist/d3-delaunay.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.6.0/proj4-src.js"></script>
+<script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
         integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
         crossorigin=""></script>
-    <script src="leaflet.rotatedMarker.js"></script>
-    <link rel="stylesheet" href="dist/wind-js-leaflet.css" />
-    <link rel="stylesheet" href="/demo/demo.css" />
-    <script src="/dist/wind-js-leaflet.js"></script>
-    <script>
-        const geocodeUrl = 'https://nominatim.openstreetmap.org/search?q=';
-        const geocodeParams = '&format=json&limit=1';
-        let map = null;
+<script type='text/javascript' src="./proj4leaflet.js"></script>
+<script src="leaflet.rotatedMarker.js"></script>
+<!--<link rel="stylesheet" href="dist/wind-js-leaflet.css"/>-->
+<!--<link rel="stylesheet" href="/demo/demo.css"/>-->
+<!--<script src="/dist/wind-js-leaflet.js"></script>-->
 
-        let windIcon = L.icon({
-            iconUrl: 'images/wind.png',
-            iconSize: [100, 100], // size of the icon
-            iconAnchor: [0, 32],
-            popupAnchor: [0, -32]
-        });
+<script>
+    const geocodeUrl = 'https://nominatim.openstreetmap.org/search?q=';
+    const geocodeParams = '&format=json&limit=1';
+    let map = null;
 
-        let windIcon2 = L.icon({
-            iconUrl: 'images/wind-direction.png',
-            iconSize: [100, 100], // size of the icon
-            iconAnchor: [0, 32],
-            popupAnchor: [0, -32]
-        });
+    let windIcon = L.icon({
+        iconUrl: 'images/wind.png',
+        iconSize: [100, 100], // size of the icon
+        iconAnchor: [0, 32],
+        popupAnchor: [0, -32]
+    });
 
-        function DataObject(id, lat, lon, dust) {
-            this.id = id
-            this.lat = lat
-            this.lon = lon
-            this.dust = dust
+    let windIcon2 = L.icon({
+        iconUrl: 'images/wind-direction.png',
+        iconSize: [100, 100], // size of the icon
+        iconAnchor: [0, 32],
+        popupAnchor: [0, -32]
+    });
+
+    function DataObject(id, lat, lon, dust) {
+        this.id = id;
+        this.lat = lat;
+        this.lon = lon;
+        this.dust = dust;
+    }
+
+    let dustsensors;
+    let voronoi;
+    let stuttgart;
+
+    async function drawVoronoi(dustSensorsPromise, hour, minute) {
+        // let canvas = document.getElementById('myCanvas');
+        // let context = canvas.getContext("2d");
+        // let context = layer;
+        // context.fillStyle = "#555555";
+        let dustSensors = await dustSensorsPromise;
+        console.log(dustSensors);
+        let points = [];
+        let i = 0;
+        for (let key in dustSensors) {
+            try {
+                let entry = dustSensors[key][hour][minute];
+                // console.log("key: " + key + " value: ");
+                // console.log(entry);
+
+                // let lon = (entry.lon - 9) * 2500;
+                // let lat = (entry.lat - 48.6) * 2500;
+
+                points.push(parseFloat(entry.lon));
+                points.push(parseFloat(entry.lat));
+                // context.fillRect(lon, lat, 3, 3);
+                // console.log("drawing ("+lon +","+lat + ")");
+            } catch (err) {
+                console.log("sensor had no value for " + hour + ":" + minute);
+            }
         }
-        let dustsensors;
+        // console.log("points");
+        // console.log(points);
+        let delaunay = new d3.Delaunay(points);
 
-        function initialize() {
-            var Esri_WorldImagery = L.tileLayer(
-                "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-                {
-                    attribution:
-                        "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, " +
-                        "AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
-                }
-            );
+        for (let i = 0; i < delaunay.points.length - 1; i += 2) {
+            // console.log("point: " + points[i] + " " + points[i+1]);
+            // let marker = L.marker([points[i], points[i+1]]).addTo(voronoi);
+            let rectangle = L.rectangle([points[i + 1], [points[i]], [points[i + 1], points[i]]], {
+                color: "#ff7800",
+                weight: 10
+            }).addTo(voronoi);
+            if (rectangle !== undefined) {
+                rectangle.bindPopup("Long: " + points[i] + " Lat: " + points[i + 1]);
+            }
+        }
 
-            let center = L.latLng(48.8, 9.2);
-            let zoom = 11;
-            map = L.map('map_canvas').setView(center, zoom);
-            let osm = new L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-                minZoom: 2,
-                maxZoom: 18
-            });
-            map.addLayer(osm);
-            dustsensors = L.layerGroup().addTo(map);
+        // context.fillRect(0,0,150,75);
 
-            let background = { "Clear map": osm, Satellite: Esri_WorldImagery };
-            let foreground = { "Feinstaubsensoren": dustsensors };
-            let layerControl = L.control.layers(background, foreground, { collapsed: false }).addTo(map);
-            let dao = new DataObject(20144, 50.814, 6.590, 0.82)
-/*
-            $.getJSON('http://localhost:3000/wind/4928/2020-1-8-16-20', function (data) {
-                console.log(data);
+        // console.log(voronoi.render(context));
 
-            })
+        // const points = [[0, 0], [0, 100], [100, 0], [100, 100]];
+        // const delaunay = d3.Delaunay.from(points);
+        // const voronoi = delaunay.voronoi([0, 0, 960, 500]);
 
-            L.marker([48.73, 9.2], {
-                rotationAngle: 45,
-                icon: windIcon
-            }).addTo(map);
-*/
-            loadapi()
-            setInterval(function () {
-                loadapi()
-            }, 300000)
+        // let myRender = L.canvas({padding: 0.5});
+        // return L.polyline(delaunay.points,{renderer: myRender});
 
-            var handleError = function (err) {
-                console.log('handleError...');
-                console.log(err);
+        // return delaunay.render();
+        // context.stroke();
+    }
+
+    async function getDustSensorsByDate(year, month, day) {
+        // $.getJSON('http://localhost:3000/dust/all/2018-7-7', function (data) {
+        return $.getJSON('http://localhost:3000/dust/all/' + year + "-" + month + "-" + day, function (data) {
+            console.log("received json");
+            return data;
+        })
+    }
+
+    function initialize() {
+        var Esri_WorldImagery = L.tileLayer(
+            "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            {
+                attribution:
+                    "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, " +
+                    "AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+            }
+        );
+        // let crs = new L.Proj.CRS('EPSG:25832',
+        //     '+proj=utm +zone=32N +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs',
+        //     {
+        //         resolutions: [
+        //             8192, 4096, 2048, 1024, 512, 256, 128
+        //         ],
+        //         origin: [0, 0]
+        //     });
+
+        let otherProjection = "+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs"; // projection to EPGS 25832
+        let lon = 517913.8280646531;
+        let lat = 5410477.433508744;
+        console.log(lon +"," +lat);
+
+        // proj4 with only 1 projection uses WGS84 as second default
+        // proj4 without coordinates returns object, that projects from first to second projection via forward or the other way with inverse
+        let converter = proj4(otherProjection);
+
+
+        let center = L.latLng(48.8, 9.2);
+        let zoom = 11;
+        map = L.map('map_canvas').setView(center, zoom);
+        let osm = new L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+            minZoom: 2,
+            maxZoom: 18,
+            renderer: L.svg(),
+            // crs: crs
+        });
+        map.addLayer(osm);
+        dustsensors = L.layerGroup().addTo(map);
+        voronoi = L.layerGroup().addTo(map);
+        stuttgart = L.layerGroup().addTo(map);
+
+
+        $.getJSON('http://localhost:3000/landkreis', function (data) {
+            let coordinates = data.features[0].geometry.coordinates[0]; // coordinates are nested arrays, there is only a single polygon
+            for(let i = 0; i < coordinates.length; i++){
+                let point = coordinates[i];
+                console.log("before: " + point.toString());
+                coordinates[i] = converter.inverse(point);
+                console.log("after: " + point.toString());
             };
+            console.log(JSON.stringify(coordinates));
+            data.features[0].geometry.coordinates[0] = coordinates;
+            console.log("new data: " + JSON.stringify(data));
+            L.geoJSON(data.features, {
+                style: {
+                    "color": "#339933",
+                    "weight": 5,
+                    "opacity": 0.80
+                }
+            }).addTo(map);
+        });
 
-            WindJSLeaflet.init({
-                localMode: true,
-                map: map,
-                layerControl: layerControl,
-                useNearest: false,
-                timeISO: null,
-                nearestDaysLimit: 7,
-                displayValues: true,
-                displayOptions: {
-                    displayPosition: 'bottomleft',
-                    displayEmptyString: 'No wind data'
-                },
-                overlayName: 'wind',
-                errorCallback: handleError
+
+        let dustSensorsPromise = getDustSensorsByDate(2018, 7, 7);
+        drawVoronoi(dustSensorsPromise, 0, 50);
+
+        let background = {"Clear map": osm, Satellite: Esri_WorldImagery};
+        let foreground = {"Feinstaubsensoren": dustsensors, "Voronoi": voronoi, "Kreis Stuttgart": stuttgart};
+        let layerControl = L.control.layers(background, foreground, {collapsed: false}).addTo(map);
+        let dao = new DataObject(20144, 50.814, 6.590, 0.82);
+        /*
+                    $.getJSON('http://localhost:3000/wind/4928/2020-1-8-16-20', function (data) {
+                        console.log(data);
+
+                    })
+
+                    L.marker([48.73, 9.2], {
+                        rotationAngle: 45,
+                        icon: windIcon
+                    }).addTo(map);
+        */
+        loadapi();
+        setInterval(function () {
+            loadapi()
+        }, 300000);
+
+        var handleError = function (err) {
+            console.log('handleError...');
+            console.log(err);
+        };
+
+        WindJSLeaflet.init({
+            localMode: true,
+            map: map,
+            layerControl: layerControl,
+            useNearest: false,
+            timeISO: null,
+            nearestDaysLimit: 7,
+            displayValues: true,
+            displayOptions: {
+                displayPosition: 'bottomleft',
+                displayEmptyString: 'No wind data'
+            },
+            overlayName: 'wind',
+            errorCallback: handleError
+        });
+
+    }
+
+    function loadapi() {
+        $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.774,9.174,10', function (data) {
+            console.log(data);
+
+            data.forEach(element => {
+                let marker = L.marker([element.location.latitude, element.location.longitude]).addTo(dustsensors);
+                if (marker !== undefined) {
+                    marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + element.timestamp);
+                }
             });
 
-        }
-
-        function loadapi() {
-            $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
-                console.log(data);
-
-                data.forEach(element => {
-                    let marker = L.marker([element.location.latitude, element.location.longitude]).addTo(dustsensors);
-                    if (marker !== undefined) {
-                        marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + element.timestamp);
-                    }
-                });
-
-            })
-        }
+        })
+    }
 
 
-
-
-    </script>
-    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+</script>
+<script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"
         integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous">
-        </script>
+</script>
 </body>
 
 </html>
