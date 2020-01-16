@@ -87,7 +87,7 @@
     }
 
     let dustsensors;
-    let voronoi;
+    let voronoiLayer;
     let stuttgart;
 
     async function drawVoronoi(dustSensorsPromise, hour, minute) {
@@ -123,14 +123,16 @@
         for (let i = 0; i < delaunay.points.length - 1; i += 2) {
             // console.log("point: " + points[i] + " " + points[i+1]);
             // let marker = L.marker([points[i], points[i+1]]).addTo(voronoi);
-            let rectangle = L.rectangle([points[i + 1], [points[i]], [points[i + 1], points[i]]], {
+            let rectangle = L.rectangle([delaunay.points[i + 1], [delaunay.points[i]], [delaunay.points[i + 1], delaunay.points[i]]], {
                 color: "#ff8888",
                 weight: 5
-            }).addTo(voronoi);
+            }).addTo(voronoiLayer);
             if (rectangle !== undefined) {
                 rectangle.bindPopup("Long: " + points[i] + " Lat: " + points[i + 1]);
             }
         }
+
+        return delaunay;
 
         // context.fillRect(0,0,150,75);
 
@@ -155,13 +157,30 @@
         })
     }
 
+    // transforms long lat to lat long for leaflet
+    function reverseCoordinates(coordinates){
+        for(let i = 0; i < coordinates.length;i++){
+            if (Array.isArray(coordinates[i])){
+                coordinates[i] = reverseCoordinates(coordinates[i]);
+            }
+            else {
+                let temp = coordinates[i];
+                coordinates[i] = coordinates[i+1];
+                coordinates[i+1] = temp;
+                return coordinates;
+            }
+        }
+        return coordinates;
+    }
+
     function initialize() {
         var Esri_WorldImagery = L.tileLayer(
             "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
             {
                 attribution:
                     "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, " +
-                    "AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+                    "AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+                minZoom: 12
             }
         );
         // let crs = new L.Proj.CRS('EPSG:25832',
@@ -188,14 +207,14 @@
         map = L.map('map_canvas').setView(center, zoom);
         let osm = new L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-            minZoom: 2,
-            maxZoom: 18,
+            minZoom: 12,
+            maxZoom: 2,
             renderer: L.svg(),
             // crs: crs
         });
-        map.addLayer(osm);
+        map.addLayer(Esri_WorldImagery);
         dustsensors = L.layerGroup().addTo(map);
-        voronoi = L.layerGroup().addTo(map);
+        voronoiLayer = L.layerGroup().addTo(map);
         stuttgart = L.layerGroup().addTo(map);
 
 
@@ -218,6 +237,8 @@
 
             // console.log(JSON.stringify(coordinates));
             data.features[0].geometry.coordinates[0] = coordinates;
+
+            // adds large polygon before stuttgart to make it a cutout
             data.features[0].geometry.coordinates.unshift(worldShadow);
             console.log(data);
             // console.log("new data: " + JSON.stringify(data));
@@ -249,10 +270,36 @@
             //     }
             // ).addTo(map);
         });
-        drawVoronoi(dustSensorsPromise, 0, 50);
+        let delaunayPromise = drawVoronoi(dustSensorsPromise, 0, 50);
+        delaunayPromise.then(delaunay => {
+            let bounds = [9.036,48.68972,9.3164,48.8697]; // xmin ymin xmax ymax
+            let voronoi = delaunay.voronoi(bounds);
+            console.log("voronoi polygon:");
+            let itr  = voronoi.cellPolygons();
 
-        let background = {"Clear map": osm, Satellite: Esri_WorldImagery};
-        let foreground = {"Feinstaubsensoren": dustsensors, "Voronoi": voronoi, "Kreis Stuttgart": stuttgart};
+            for(let triangle of itr){
+                console.log(triangle);
+                console.log(reverseCoordinates(triangle));
+
+
+                L.polygon(triangle, {
+                    color : "#dddddd",
+                    weight: 2,
+                    fillOpacity: 0
+                }).addTo(voronoiLayer);
+            }
+            // let coordinates = [];
+            // for (let i = 0; i < voronoi.points.length - 1; i += 2) {
+            //     coordinates.push([voronoi.points[i + 1], voronoi.points[i]]);
+            // }
+            // console.log("coordinates");
+            // console.log(coordinates);
+            // L.polyline(coordinates, {color: 'red'}).addTo(map);
+
+        });
+
+        let background = {Satellite: Esri_WorldImagery, "Clear map": osm};
+        let foreground = {"Feinstaubsensoren": dustsensors, "Voronoi": voronoiLayer, "Kreis Stuttgart": stuttgart};
         let layerControl = L.control.layers(background, foreground, {collapsed: false}).addTo(map);
         let dao = new DataObject(20144, 50.814, 6.590, 0.82);
         /*
