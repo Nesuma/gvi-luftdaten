@@ -124,8 +124,8 @@
             // console.log("point: " + points[i] + " " + points[i+1]);
             // let marker = L.marker([points[i], points[i+1]]).addTo(voronoi);
             let rectangle = L.rectangle([points[i + 1], [points[i]], [points[i + 1], points[i]]], {
-                color: "#ff7800",
-                weight: 10
+                color: "#ff8888",
+                weight: 5
             }).addTo(voronoi);
             if (rectangle !== undefined) {
                 rectangle.bindPopup("Long: " + points[i] + " Lat: " + points[i + 1]);
@@ -176,7 +176,7 @@
         let otherProjection = "+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs"; // projection to EPGS 25832
         let lon = 517913.8280646531;
         let lat = 5410477.433508744;
-        console.log(lon +"," +lat);
+        console.log(lon + "," + lat);
 
         // proj4 with only 1 projection uses WGS84 as second default
         // proj4 without coordinates returns object, that projects from first to second projection via forward or the other way with inverse
@@ -199,28 +199,56 @@
         stuttgart = L.layerGroup().addTo(map);
 
 
+        let dustSensorsPromise = getDustSensorsByDate(2018, 7, 7);
+
+
         $.getJSON('http://localhost:3000/landkreis', function (data) {
             let coordinates = data.features[0].geometry.coordinates[0]; // coordinates are nested arrays, there is only a single polygon
-            for(let i = 0; i < coordinates.length; i++){
+            for (let i = 0; i < coordinates.length; i++) {
                 let point = coordinates[i];
-                console.log("before: " + point.toString());
+                // console.log("before: " + point.toString());
                 coordinates[i] = converter.inverse(point);
-                console.log("after: " + point.toString());
-            };
-            console.log(JSON.stringify(coordinates));
+                // console.log("after: " + point.toString());
+            }
+            let worldShadow = [
+                [90, -180],
+                [90, 180],
+                [-90, 180],
+                [-90, -180]];
+
+            // console.log(JSON.stringify(coordinates));
             data.features[0].geometry.coordinates[0] = coordinates;
-            console.log("new data: " + JSON.stringify(data));
+            data.features[0].geometry.coordinates.unshift(worldShadow);
+            console.log(data);
+            // console.log("new data: " + JSON.stringify(data));
+            // Makes a stuttgart polygon
             L.geoJSON(data.features, {
                 style: {
-                    "color": "#339933",
+                    "color": "#222222",
                     "weight": 5,
-                    "opacity": 0.80
+                    "fillOpacity": 0.8
                 }
             }).addTo(map);
+
+            // cutout
+            // var shadingPolygon = L.polygon(
+            //     [
+            //         [
+            //             [90, -180],
+            //             [90, 180],
+            //             [-90, 180],
+            //             [-90, -180]],
+            //         [
+            //             data.features[0].geometry.coordinates[0]
+            //         ]
+            //     ],
+            //     {
+            //         "color": "#339933",
+            //         "weight": 5,
+            //         "opacity": 0.80
+            //     }
+            // ).addTo(map);
         });
-
-
-        let dustSensorsPromise = getDustSensorsByDate(2018, 7, 7);
         drawVoronoi(dustSensorsPromise, 0, 50);
 
         let background = {"Clear map": osm, Satellite: Esri_WorldImagery};
@@ -238,10 +266,10 @@
                         icon: windIcon
                     }).addTo(map);
         */
-        loadapi();
-        setInterval(function () {
-            loadapi()
-        }, 300000);
+        // loadapi();
+        // setInterval(function () {
+        //     loadapi()
+        // }, 300000);
 
         var handleError = function (err) {
             console.log('handleError...');
