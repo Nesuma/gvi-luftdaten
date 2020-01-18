@@ -91,40 +91,10 @@
     }
 
     let dustsensors;
-    let voronoiLayer;
-    let stuttgart;
-
-    async function drawCenters(dustSensorsPromise, hour, minute) {
-        let dustSensors = await dustSensorsPromise;
-        console.log(dustSensors);
-        let points = [];
-        let i = 0;
-        for (let key in dustSensors) {
-            try {
-                let entry = dustSensors[key][hour][minute];
-
-                points.push(parseFloat(entry.lon));
-                points.push(parseFloat(entry.lat));
-            } catch (err) {
-                console.log("sensor had no value for " + hour + ":" + minute);
-            }
-        }
-        let delaunay = new d3.Delaunay(points);
-
-        for (let i = 0; i < delaunay.points.length - 1; i += 2) {
-            let rectangle = L.rectangle([delaunay.points[i + 1], [delaunay.points[i]], [delaunay.points[i + 1], delaunay.points[i]]], {
-                color: "#ff8888",
-                weight: 5
-            }).addTo(voronoiLayer);
-            if (rectangle !== undefined) {
-                rectangle.bindPopup("Long: " + points[i] + " Lat: " + points[i + 1]);
-            }
-        }
-        return delaunay;
-    }
 
     async function getDustSensorsByDate(year, month, day) {
-        // $.getJSON('http://localhost:3000/dust/all/2018-7-7', function (data) {
+        // http://localhost:3000/dust/all/2018-7-7
+        // will need a converter from live data to regular data
         return $.getJSON('http://localhost:3000/dust/all/' + year + "-" + month + "-" + day, function (data) {
             console.log("received json");
             return data;
@@ -139,66 +109,42 @@
         return proj4(otherProjection);
     }
 
-    async function getAndSetStuttgartPolygons() {
-        let converter = getCoordConverter();
-        let stuttgartGeoJSON = await $.getJSON('http://localhost:3000/landkreis');
-        let coordinates = stuttgartGeoJSON.features[0].geometry.coordinates[0]; // coordinates are nested arrays, there is only a single polygon
-        for (let i = 0; i < coordinates.length; i++) {
-            let point = coordinates[i];
-            coordinates[i] = converter.inverse(point);
-        }
-        let worldShadow = [
-            [180, -90],
-            [180, 90],
-            [-180, 90],
-            [-180, -90]];
+    function getArrayOfPoints(dustSensors, hour, minute) {
+        let points = [];
+        for (let key in dustSensors) {
+            try {
+                let entry = dustSensors[key][hour][minute];
 
-        stuttgartGeoJSON.features[0].geometry.coordinates[0] = coordinates;
-        L.geoJSON(stuttgartGeoJSON.features, {
-            style: {
-                "color": "#77ff77",
-                "weight": 5,
-                "fillOpacity": 0.4
-            }
-        }).addTo(stuttgart);
-
-        // adds large polygon before stuttgart to make it a cutout
-        stuttgartGeoJSON.features[0].geometry.coordinates.unshift(worldShadow);
-        let reverseStuttgartPolygon =stuttgartGeoJSON.features[0].geometry.coordinates[1];
-        console.log("reverseStuttgartPolygon");
-        console.log(reverseStuttgartPolygon);
-        L.geoJSON(stuttgartGeoJSON.features, {
-            style: {
-                "color": "#222222",
-                "weight": 5,
-                "fillOpacity": 0.8
-            }
-        }).addTo(voronoiLayer);
-        return reverseStuttgartPolygon;
-    }
-
-    // transforms long lat to lat long for leaflet
-    function reverseCoordinates(coordinates) {
-        let result = [];
-        for (let i = 0; i < coordinates.length; i++) {
-            if (Array.isArray(coordinates[i])) {
-                result[i] = reverseCoordinates(coordinates[i]);
-            } else {
-                result[i] = coordinates[i + 1];
-                result[i + 1] = coordinates[i];
-                return result;
+                points.push(parseFloat(entry.lon));
+                points.push(parseFloat(entry.lat));
+            } catch (err) {
+                console.log("sensor had no value for " + hour + ":" + minute);
             }
         }
-        return result;
+        return points;
     }
 
-    async function drawVoronoi(delaunayPromise,reverseStuttgartPromise) {
-        let delaunay = await delaunayPromise;
-        let reverseStuttgartPolygon = await reverseStuttgartPromise;
-        console.log("reverseStuttgartPolygon");
-        console.log(reverseStuttgartPolygon);
+    function drawCenters(points, voronoiLayer) {
+        for (let i = 0; i < points.length - 1; i += 2) {
+            let rectangle = L.rectangle([points[i + 1], [points[i]], [points[i + 1], points[i]]], {
+                color: "#ff8888",
+                weight: 5
+            }).addTo(voronoiLayer);
+            if (rectangle !== undefined) {
+                rectangle.bindPopup("Long: " + points[i] + " Lat: " + points[i + 1]);
+            }
+        }
+    }
+
+    async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, voronoiLayer) {
+        let points = getArrayOfPoints(await dustSensorPromise, hour, minute);
+        let delaunay = new d3.Delaunay(points);
+
+        drawCenters(delaunay.points, voronoiLayer);
+
         let bounds = [9.036, 48.68972, 9.3164, 48.8697]; // xmin ymin xmax ymax
         let voronoi = delaunay.voronoi(bounds);
+
         let itr = voronoi.cellPolygons();
 
         for (let triangle of itr) {
@@ -217,6 +163,55 @@
         }
 
     }
+
+    async function getStuttgartPolygons() {
+        let converter = getCoordConverter();
+        let stuttgartGeoJSON = await $.getJSON('http://localhost:3000/landkreis');
+        let coordinates = stuttgartGeoJSON.features[0].geometry.coordinates[0]; // coordinates are nested arrays, there is only a single polygon
+        for (let i = 0; i < coordinates.length; i++) {
+            let point = coordinates[i];
+            coordinates[i] = converter.inverse(point);
+        }
+
+        let worldShadow = [
+            [180, -90],
+            [180, 90],
+            [-180, 90],
+            [-180, -90]];
+
+        stuttgartGeoJSON.features[0].geometry.coordinates[0] = coordinates;
+
+        // adds large polygon before stuttgart to make it a cutout
+        stuttgartGeoJSON.features[0].geometry.coordinates.unshift(worldShadow);
+        return stuttgartGeoJSON;
+    }
+
+    // transforms long lat to lat long for leaflet
+    function reverseCoordinates(coordinates) {
+        let result = [];
+        for (let i = 0; i < coordinates.length; i++) {
+            if (Array.isArray(coordinates[i])) {
+                result[i] = reverseCoordinates(coordinates[i]);
+            } else {
+                result[i] = coordinates[i + 1];
+                result[i + 1] = coordinates[i];
+                return result;
+            }
+        }
+        return result;
+    }
+
+
+    function addLayer(stuttgartGeoJSON, stuttgart) {
+        L.geoJSON(stuttgartGeoJSON.features, {
+            style: {
+                "color": "#222222",
+                "weight": 5,
+                "fillOpacity": 0.8
+            }
+        }).addTo(stuttgart);
+    }
+
 
     function initialize() {
         var Esri_WorldImagery = L.tileLayer(
@@ -240,24 +235,35 @@
             renderer: L.svg(),
         });
         map.addLayer(Esri_WorldImagery);
+        
         dustsensors = L.layerGroup().addTo(map);
-        voronoiLayer = L.layerGroup().addTo(map);
-        stuttgart = L.layerGroup();
+        let voronoiLayer = L.layerGroup().addTo(map);
+        let stuttgartLayer = L.layerGroup().addTo(map);
 
 
-        let dustSensorsPromise = getDustSensorsByDate(2019, 1, 7);
+        getStuttgartPolygons().then((stuttgartGeoJSON) => {
+            console.log("stuttgartGeoJSON");
+            console.log(stuttgartGeoJSON);
+            addLayer(stuttgartGeoJSON, stuttgartLayer);
+            // start slider with reverseStuttgart?
+            let year = 2019;
+            let month = 1;
+            let day = 7;
+            let hour = 10;
+            let minute = 50;
+            let dustSensorsPromise = getDustSensorsByDate(year, month, day);
+            drawVoronoi(dustSensorsPromise, hour, minute, stuttgartGeoJSON.features[0].geometry.coordinates[1], voronoiLayer);
+        });
 
-        let reverseStuttgartPromise = getAndSetStuttgartPolygons();
+        // let reverseStuttgartPromise = getStuttgartPolygons();
 
-        let delaunayPromise = drawCenters(dustSensorsPromise, 0, 50);
+        // hier hätte ich lieber 1 funktion draw voronoi statt beidem
 
-        drawVoronoi(delaunayPromise,reverseStuttgartPromise);
 
         let background = {Satellite: Esri_WorldImagery, "Clear map": osm};
         let foreground = {
             "Feinstaubsensoren": dustsensors,
             "Voronoi": voronoiLayer,
-            "Kreis Stuttgart": stuttgart
         };
         let layerControl = L.control.layers(background, foreground, {collapsed: false}).addTo(map);
         let dao = new DataObject(20144, 50.814, 6.590, 0.82);
