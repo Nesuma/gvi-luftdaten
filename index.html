@@ -97,8 +97,9 @@
         // will need a converter from live data to regular data
         return $.getJSON('http://localhost:3000/dust/all/' + year + "-" + month + "-" + day, function (data) {
             console.log("received json");
-            return data;
-        })
+            // return data;
+        });
+
     }
 
     function getCoordConverter() {
@@ -109,12 +110,11 @@
         return proj4(otherProjection);
     }
 
-    function getArrayOfPoints(dustSensors, hour, minute) {
+    function getPoints(dustSensors, hour, minute) {
         let points = [];
         for (let key in dustSensors) {
             try {
                 let entry = dustSensors[key][hour][minute];
-
                 points.push(parseFloat(entry.lon));
                 points.push(parseFloat(entry.lat));
             } catch (err) {
@@ -124,44 +124,115 @@
         return points;
     }
 
-    function drawCenters(points, voronoiLayer) {
-        for (let i = 0; i < points.length - 1; i += 2) {
-            let rectangle = L.rectangle([points[i + 1], [points[i]], [points[i + 1], points[i]]], {
-                color: "#ff8888",
-                weight: 5
-            }).addTo(voronoiLayer);
-            if (rectangle !== undefined) {
-                rectangle.bindPopup("Long: " + points[i] + " Lat: " + points[i + 1]);
+    function getColor(density) {
+        return density > 110 ? '#a10443' :
+            density > 90 ? '#b31847' :
+                density > 70 ? '#be2549' :
+                    density > 60 ? '#d5404b' :
+                        density > 50 ? '#de4d4a' :
+                            density > 40 ? '#eb6449' :
+                                density > 35 ? '#f3784c' :
+                                    density > 30 ? '#fba25d' :
+                                        density > 25 ? '#fcaf65' :
+                                            density > 20 ? '#f6faaf' :
+                                                density > 15 ? '#f6faaf' :
+                                                    density > 10 ? '#e8f6a4' :
+                                                        density > 5 ? '#b1dfa1' :
+                                                            density > 3 ? '#b1dfa1' :
+                                                                density > 0 ? '#73c3a7' :
+                                                                    '#888888';
+    }
+
+    function filterWantedSensors(dustSensors, hour, minute, bounds, reverseStuttgartPolygon, p2) {
+        let momentSensors = [];
+        let i = 0;
+        for (let key in dustSensors) {
+            try {
+                let entry = {};
+                let sensor = dustSensors[key][hour][minute];
+                entry.lon = parseFloat(sensor.lon);
+                entry.lat = parseFloat(sensor.lat);
+                entry.dust = (p2) ? sensor.p2 : sensor.p1;
+                // entry.dust = parseFloat(sensor.p2) + parseFloat(sensor.p1);
+                entry.id = key;
+                console.log(JSON.stringify(entry));
+                momentSensors.push(entry);
+                i++;
+                if (i === 15) {
+                    break;
+                }
+            } catch (e) {
+                console.log(e);
+                console.log("id: " + key + " hour: " + hour + " minute: " + minute);
             }
+        }
+        console.log("momentSensors");
+        console.log(momentSensors);
+        addCells(momentSensors, bounds, reverseStuttgartPolygon);
+        console.log("momentSensors");
+        console.log(momentSensors);
+        return momentSensors;
+    }
+
+    function addCells(wantedSensors, bounds, reverseStuttgartPolygon) {
+        let points = [];
+        for (let i = 0; i < wantedSensors.length; i++) {
+            points.push(wantedSensors[i].lon);
+            points.push(wantedSensors[i].lat);
+        }
+
+        let delaunay = new d3.Delaunay(points);
+
+        let voronoi = delaunay.voronoi(bounds);
+
+        let cells = voronoi.cellPolygons();
+        let i = 0;
+        for (let cell of cells) {
+            let reversedCell = reverseCoordinates(cell);
+            console.log(wantedSensors[i].id);
+            wantedSensors[i].cell = martinez.intersection([reversedCell], [reverseCoordinates(reverseStuttgartPolygon)]);
+            console.log(wantedSensors[i].cell);
+            i++;
         }
     }
 
-    async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, voronoiLayer) {
-        let points = getArrayOfPoints(await dustSensorPromise, hour, minute);
-        let delaunay = new d3.Delaunay(points);
+    async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, voronoiLayer, p2) {
+        p2 = true;
+        let dustSensors = await dustSensorPromise;
 
-        drawCenters(delaunay.points, voronoiLayer);
+        let bounds = [9.036, 48.68972, 9.3164, 48.8697];
+        let wantedSensors = filterWantedSensors(dustSensors, hour, minute, bounds, reverseStuttgartPolygon, p2);
 
-        let bounds = [9.036, 48.68972, 9.3164, 48.8697]; // xmin ymin xmax ymax
-        let voronoi = delaunay.voronoi(bounds);
-
-        let itr = voronoi.cellPolygons();
-
-        for (let triangle of itr) {
-            let reversedTriangle = reverseCoordinates(triangle);
-            let cutTriangle = martinez.intersection([reversedTriangle], [reverseCoordinates(reverseStuttgartPolygon)]);
-
-            if (cutTriangle != undefined && cutTriangle[0] != undefined) {
-                let p = L.polygon(cutTriangle[0], {
+        for (let i = 0; i < wantedSensors.length; i++) {
+            let sensor = wantedSensors[i];
+            let cell = sensor.cell;
+            if (cell !== undefined) {
+                console.log(sensor);
+                let p = L.polygon(cell, {
+                    fillColor: getColor(sensor.dust),
                     color: "#222222",
                     weight: 2,
-                    fillOpacity: 0
+                    fillOpacity: 0.6
                 });
-                p.bindPopup(cutTriangle[0].toString());
-                p.addTo(voronoiLayer)
+                p.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
+                p.addTo(voronoiLayer);
+                let r = L.rectangle([[sensor.lat, sensor.lon], [sensor.lat, sensor.lon]], {
+                    color: "#ffffff",
+                    weight: 15
+                });
+                r.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
+                r.addTo(voronoiLayer);
+
             }
         }
 
+
+        // addCells(dustSensors,hour,minute,bounds);
+        // console.log("final dustSensors");
+        // console.log(dustSensors);
+
+
+        // drawPolygons(voronoi, voronoiLayer, reverseStuttgartPolygon);
     }
 
     async function getStuttgartPolygons() {
@@ -235,7 +306,7 @@
             renderer: L.svg(),
         });
         map.addLayer(Esri_WorldImagery);
-        
+
         dustsensors = L.layerGroup().addTo(map);
         let voronoiLayer = L.layerGroup().addTo(map);
         let stuttgartLayer = L.layerGroup().addTo(map);
