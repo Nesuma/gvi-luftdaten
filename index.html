@@ -155,22 +155,18 @@
                 entry.dust = (p2) ? sensor.p2 : sensor.p1;
                 // entry.dust = parseFloat(sensor.p2) + parseFloat(sensor.p1);
                 entry.id = key;
-                console.log(JSON.stringify(entry));
+                // console.log(JSON.stringify(entry));
                 momentSensors.push(entry);
-                i++;
-                if (i === 15) {
-                    break;
-                }
+                // i++;
+                // if (i === 100) {
+                //     break;
+                // }
             } catch (e) {
                 console.log(e);
                 console.log("id: " + key + " hour: " + hour + " minute: " + minute);
             }
         }
-        console.log("momentSensors");
-        console.log(momentSensors);
         addCells(momentSensors, bounds, reverseStuttgartPolygon);
-        console.log("momentSensors");
-        console.log(momentSensors);
         return momentSensors;
     }
 
@@ -189,14 +185,15 @@
         let i = 0;
         for (let cell of cells) {
             let reversedCell = reverseCoordinates(cell);
-            console.log(wantedSensors[i].id);
-            wantedSensors[i].cell = martinez.intersection([reversedCell], [reverseCoordinates(reverseStuttgartPolygon)]);
-            console.log(wantedSensors[i].cell);
+            // console.log(wantedSensors[i].id);
+            // wantedSensors[i].cell = martinez.intersection([reversedCell], [reverseCoordinates(reverseStuttgartPolygon)]);
+            wantedSensors[i].cell = reversedCell;
+            // console.log(wantedSensors[i].cell);
             i++;
         }
     }
 
-    async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, voronoiLayer, p2) {
+    async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, voronoiLayer,centerLayer, p2) {
         p2 = true;
         let dustSensors = await dustSensorPromise;
 
@@ -207,7 +204,8 @@
             let sensor = wantedSensors[i];
             let cell = sensor.cell;
             if (cell !== undefined) {
-                console.log(sensor);
+                // console.log("sensor");
+                // console.log(sensor);
                 let p = L.polygon(cell, {
                     fillColor: getColor(sensor.dust),
                     color: "#222222",
@@ -216,14 +214,16 @@
                 });
                 p.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
                 p.addTo(voronoiLayer);
-                let r = L.rectangle([[sensor.lat, sensor.lon], [sensor.lat, sensor.lon]], {
-                    color: "#ffffff",
-                    weight: 15
-                });
-                r.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
-                r.addTo(voronoiLayer);
-
+            } else {
+                console.log("big oof");
+                console.log(sensor)
             }
+            let r = L.rectangle([[sensor.lat, sensor.lon], [sensor.lat, sensor.lon]], {
+                color: "#ffffff",
+                weight: 10
+            });
+            r.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
+            r.addTo(centerLayer);
         }
 
 
@@ -309,6 +309,7 @@
 
         dustsensors = L.layerGroup().addTo(map);
         let voronoiLayer = L.layerGroup().addTo(map);
+        let centerLayer = L.layerGroup().addTo(map);
         let stuttgartLayer = L.layerGroup().addTo(map);
 
 
@@ -317,13 +318,13 @@
             console.log(stuttgartGeoJSON);
             addLayer(stuttgartGeoJSON, stuttgartLayer);
             // start slider with reverseStuttgart?
-            let year = 2019;
+            let year = 2020;
             let month = 1;
-            let day = 7;
-            let hour = 10;
-            let minute = 50;
+            let day = 10;
+            let hour = 3;
+            let minute = 20;
             let dustSensorsPromise = getDustSensorsByDate(year, month, day);
-            drawVoronoi(dustSensorsPromise, hour, minute, stuttgartGeoJSON.features[0].geometry.coordinates[1], voronoiLayer);
+            drawVoronoi(dustSensorsPromise, hour, minute, stuttgartGeoJSON.features[0].geometry.coordinates[1], voronoiLayer,centerLayer);
         });
 
         // let reverseStuttgartPromise = getStuttgartPolygons();
@@ -335,6 +336,7 @@
         let foreground = {
             "Feinstaubsensoren": dustsensors,
             "Voronoi": voronoiLayer,
+            "Centers": centerLayer,
         };
         let layerControl = L.control.layers(background, foreground, {collapsed: false}).addTo(map);
         let dao = new DataObject(20144, 50.814, 6.590, 0.82);
@@ -349,10 +351,10 @@
                         icon: windIcon
                     }).addTo(map);
         */
-        // loadapi();
-        // setInterval(function () {
-        //     loadapi()
-        // }, 300000);
+        loadapi();
+        setInterval(function () {
+            loadapi()
+        }, 300000);
 
         var handleError = function (err) {
             console.log('handleError...');
