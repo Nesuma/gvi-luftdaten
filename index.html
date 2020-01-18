@@ -94,11 +94,7 @@
     let voronoiLayer;
     let stuttgart;
 
-    async function drawVoronoi(dustSensorsPromise, hour, minute) {
-        // let canvas = document.getElementById('myCanvas');
-        // let context = canvas.getContext("2d");
-        // let context = layer;
-        // context.fillStyle = "#555555";
+    async function drawCenters(dustSensorsPromise, hour, minute) {
         let dustSensors = await dustSensorsPromise;
         console.log(dustSensors);
         let points = [];
@@ -106,27 +102,16 @@
         for (let key in dustSensors) {
             try {
                 let entry = dustSensors[key][hour][minute];
-                // console.log("key: " + key + " value: ");
-                // console.log(entry);
-
-                // let lon = (entry.lon - 9) * 2500;
-                // let lat = (entry.lat - 48.6) * 2500;
 
                 points.push(parseFloat(entry.lon));
                 points.push(parseFloat(entry.lat));
-                // context.fillRect(lon, lat, 3, 3);
-                // console.log("drawing ("+lon +","+lat + ")");
             } catch (err) {
                 console.log("sensor had no value for " + hour + ":" + minute);
             }
         }
-        // console.log("points");
-        // console.log(points);
         let delaunay = new d3.Delaunay(points);
 
         for (let i = 0; i < delaunay.points.length - 1; i += 2) {
-            // console.log("point: " + points[i] + " " + points[i+1]);
-            // let marker = L.marker([points[i], points[i+1]]).addTo(voronoi);
             let rectangle = L.rectangle([delaunay.points[i + 1], [delaunay.points[i]], [delaunay.points[i + 1], delaunay.points[i]]], {
                 color: "#ff8888",
                 weight: 5
@@ -135,22 +120,7 @@
                 rectangle.bindPopup("Long: " + points[i] + " Lat: " + points[i + 1]);
             }
         }
-
         return delaunay;
-
-        // context.fillRect(0,0,150,75);
-
-        // console.log(voronoi.render(context));
-
-        // const points = [[0, 0], [0, 100], [100, 0], [100, 100]];
-        // const delaunay = d3.Delaunay.from(points);
-        // const voronoi = delaunay.voronoi([0, 0, 960, 500]);
-
-        // let myRender = L.canvas({padding: 0.5});
-        // return L.polyline(delaunay.points,{renderer: myRender});
-
-        // return delaunay.render();
-        // context.stroke();
     }
 
     async function getDustSensorsByDate(year, month, day) {
@@ -159,6 +129,52 @@
             console.log("received json");
             return data;
         })
+    }
+
+    function getCoordConverter() {
+        let otherProjection = "+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs"; // projection to EPGS 25832
+
+        // proj4 with only 1 projection uses WGS84 as second default
+        // proj4 without coordinates returns object, that projects from first to second projection via forward or the other way with inverse
+        return proj4(otherProjection);
+    }
+
+    async function getAndSetStuttgartPolygons() {
+        let converter = getCoordConverter();
+        let stuttgartGeoJSON = await $.getJSON('http://localhost:3000/landkreis');
+        let coordinates = stuttgartGeoJSON.features[0].geometry.coordinates[0]; // coordinates are nested arrays, there is only a single polygon
+        for (let i = 0; i < coordinates.length; i++) {
+            let point = coordinates[i];
+            coordinates[i] = converter.inverse(point);
+        }
+        let worldShadow = [
+            [180, -90],
+            [180, 90],
+            [-180, 90],
+            [-180, -90]];
+
+        stuttgartGeoJSON.features[0].geometry.coordinates[0] = coordinates;
+        L.geoJSON(stuttgartGeoJSON.features, {
+            style: {
+                "color": "#77ff77",
+                "weight": 5,
+                "fillOpacity": 0.4
+            }
+        }).addTo(stuttgart);
+
+        // adds large polygon before stuttgart to make it a cutout
+        stuttgartGeoJSON.features[0].geometry.coordinates.unshift(worldShadow);
+        let reverseStuttgartPolygon =stuttgartGeoJSON.features[0].geometry.coordinates[1];
+        console.log("reverseStuttgartPolygon");
+        console.log(reverseStuttgartPolygon);
+        L.geoJSON(stuttgartGeoJSON.features, {
+            style: {
+                "color": "#222222",
+                "weight": 5,
+                "fillOpacity": 0.8
+            }
+        }).addTo(voronoiLayer);
+        return reverseStuttgartPolygon;
     }
 
     // transforms long lat to lat long for leaflet
@@ -176,6 +192,32 @@
         return result;
     }
 
+    async function drawVoronoi(delaunayPromise,reverseStuttgartPromise) {
+        let delaunay = await delaunayPromise;
+        let reverseStuttgartPolygon = await reverseStuttgartPromise;
+        console.log("reverseStuttgartPolygon");
+        console.log(reverseStuttgartPolygon);
+        let bounds = [9.036, 48.68972, 9.3164, 48.8697]; // xmin ymin xmax ymax
+        let voronoi = delaunay.voronoi(bounds);
+        let itr = voronoi.cellPolygons();
+
+        for (let triangle of itr) {
+            let reversedTriangle = reverseCoordinates(triangle);
+            let cutTriangle = martinez.intersection([reversedTriangle], [reverseCoordinates(reverseStuttgartPolygon)]);
+
+            if (cutTriangle != undefined && cutTriangle[0] != undefined) {
+                let p = L.polygon(cutTriangle[0], {
+                    color: "#222222",
+                    weight: 2,
+                    fillOpacity: 0
+                });
+                p.bindPopup(cutTriangle[0].toString());
+                p.addTo(voronoiLayer)
+            }
+        }
+
+    }
+
     function initialize() {
         var Esri_WorldImagery = L.tileLayer(
             "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -186,23 +228,6 @@
                 minZoom: 12
             }
         );
-        // let crs = new L.Proj.CRS('EPSG:25832',
-        //     '+proj=utm +zone=32N +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs',
-        //     {
-        //         resolutions: [
-        //             8192, 4096, 2048, 1024, 512, 256, 128
-        //         ],
-        //         origin: [0, 0]
-        //     });
-
-        let otherProjection = "+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs"; // projection to EPGS 25832
-        let lon = 517913.8280646531;
-        let lat = 5410477.433508744;
-        console.log(lon + "," + lat);
-
-        // proj4 with only 1 projection uses WGS84 as second default
-        // proj4 without coordinates returns object, that projects from first to second projection via forward or the other way with inverse
-        let converter = proj4(otherProjection);
 
 
         let center = L.latLng(48.8, 9.2);
@@ -213,150 +238,25 @@
             minZoom: 12,
             maxZoom: 2,
             renderer: L.svg(),
-            // crs: crs
         });
         map.addLayer(Esri_WorldImagery);
         dustsensors = L.layerGroup().addTo(map);
-        voronoiSquareLayer = L.layerGroup().addTo(map);
         voronoiLayer = L.layerGroup().addTo(map);
-        stuttgart = L.layerGroup().addTo(map);
+        stuttgart = L.layerGroup();
 
 
-        let dustSensorsPromise = getDustSensorsByDate(2018, 7, 7);
-        let reverseStuttgartPolygon;
+        let dustSensorsPromise = getDustSensorsByDate(2019, 1, 7);
 
-        $.getJSON('http://localhost:3000/landkreis', function (data) {
-            let coordinates = data.features[0].geometry.coordinates[0]; // coordinates are nested arrays, there is only a single polygon
-            for (let i = 0; i < coordinates.length; i++) {
-                let point = coordinates[i];
-                // console.log("before: " + point.toString());
-                coordinates[i] = converter.inverse(point);
-                // console.log("after: " + point.toString());
-            }
-            let worldShadow = [
-                [180, -90],
-                [180, 90],
-                [-180, 90],
-                [-180, -90]];
+        let reverseStuttgartPromise = getAndSetStuttgartPolygons();
 
-            // console.log(JSON.stringify(coordinates));
-            data.features[0].geometry.coordinates[0] = coordinates;
-            L.geoJSON(data.features,{
-                style: {
-                    "color": "#773300",
-                    "weight": 5,
-                    "fillOpacity": 0.4
-                }
-            }).addTo(stuttgart);
-            // adds large polygon before stuttgart to make it a cutout
-            data.features[0].geometry.coordinates.unshift(worldShadow);
-            reverseStuttgartPolygon = data.features[0].geometry.coordinates;
-            console.log(data);
-            // console.log("new data: " + JSON.stringify(data));
-            // Makes a stuttgart polygon
-            L.geoJSON(data.features, {
-                style: {
-                    "color": "#222222",
-                    "weight": 5,
-                    "fillOpacity": 0.8
-                }
-            }).addTo(map);
+        let delaunayPromise = drawCenters(dustSensorsPromise, 0, 50);
 
-            // cutout
-            // var shadingPolygon = L.polygon(
-            //     [
-            //         [
-            //             [90, -180],
-            //             [90, 180],
-            //             [-90, 180],
-            //             [-90, -180]],
-            //         [
-            //             data.features[0].geometry.coordinates[0]
-            //         ]
-            //     ],
-            //     {
-            //         "color": "#339933",
-            //         "weight": 5,
-            //         "opacity": 0.80
-            //     }
-            // ).addTo(map);
-        });
-        let delaunayPromise = drawVoronoi(dustSensorsPromise, 0, 50);
-        delaunayPromise.then(delaunay => {
-            let bounds = [9.036, 48.68972, 9.3164, 48.8697]; // xmin ymin xmax ymax
-            let voronoi = delaunay.voronoi(bounds);
-            console.log("voronoi polygon:");
-            let itr = voronoi.cellPolygons();
-
-            // console.log(reverseStuttgartPolygon);
-            let rr = reverseCoordinates(reverseStuttgartPolygon[1]);
-            console.log(rr);
-            // let a = [[50, 9], [50, 10], [45, 10], [45, 10]];
-            // console.log(a);
-            // let b = reverseCoordinates(Array.from(a));
-            // console.log(b);
-            // L.polygon(rr, {
-            //     "color": "#888888",
-            //     "weight": 5,
-            //     "fillOpacity": 0.5
-            // }).addTo(map);
-            // console.log(reverseStuttgartPolygon);
-            let time = 0;
-            for (let triangle of itr) {
-                console.log("triangle "+ time);
-                console.log(triangle);
-                // console.log(reverseCoordinates(triangle));
-                let reversedTriangle = reverseCoordinates(triangle);
-                console.log("reversedTriangle "+ time);
-                console.log(reversedTriangle);
-                // let cutTriangle = greinerHormann.intersection(reversedTriangle, rr);
-                console.log("rr");
-                console.log(rr);
-                let cutTriangle = martinez.intersection([reversedTriangle], [rr]);
-                // // let cutTriangle = triangle
-                console.log("cutTriangle "+ time);
-                console.log(cutTriangle);
-
-                // setTimeout(function(){
-                // let p2 = L.polygon(reversedTriangle, {
-                //     color: "#ff3333",
-                //     weight: 2,
-                //     fillOpacity: 0.5
-                // });
-                // p2.bindPopup(cutTriangle[0].toString());
-                // p2.addTo(voronoiSquareLayer)
-                if (cutTriangle != undefined && cutTriangle[0] != undefined) {
-                    let p = L.polygon(cutTriangle[0], {
-                        color: "#222222",
-                        weight: 2,
-                        fillOpacity: 0
-                    });
-                    p.bindPopup(cutTriangle[0].toString());
-                    p.addTo(voronoiLayer)
-                }
-                time++;
-                // if (time === 13) {
-                //     break;
-                // }
-
-                // },time += 50);
-
-            }
-            // let coordinates = [];
-            // for (let i = 0; i < voronoi.points.length - 1; i += 2) {
-            //     coordinates.push([voronoi.points[i + 1], voronoi.points[i]]);
-            // }
-            // console.log("coordinates");
-            // console.log(coordinates);
-            // L.polyline(coordinates, {color: 'red'}).addTo(map);
-
-        });
+        drawVoronoi(delaunayPromise,reverseStuttgartPromise);
 
         let background = {Satellite: Esri_WorldImagery, "Clear map": osm};
         let foreground = {
             "Feinstaubsensoren": dustsensors,
             "Voronoi": voronoiLayer,
-            "VoronoiSQ": voronoiSquareLayer,
             "Kreis Stuttgart": stuttgart
         };
         let layerControl = L.control.layers(background, foreground, {collapsed: false}).addTo(map);
