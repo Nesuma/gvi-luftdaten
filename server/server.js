@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const csp = require(`helmet-csp`)
 const {promisify} = require('util');
 //const request = require('request');
 const path = require('path')
@@ -343,6 +344,13 @@ async function startStaticFileAPI() {
         //     res.send((JSON.parse(await shapefiles[shapefile])));
         // }
     });
+    app.use(csp({
+        directives: {
+            defaultSrc: [`'self'`]
+        }
+    }));
+    // app.use(express.static("polybooljs"));
+    app.use(express.static("greinerHormann"));
     app.get("/leaflet.rotatedMarker.js", (req,res) => {
         res.sendFile(path.join(__dirname, "../leaflet.rotatedMarker.js"));
     });

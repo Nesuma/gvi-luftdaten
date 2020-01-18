@@ -51,6 +51,9 @@
 
 <script src="https://unpkg.com/d3-delaunay@5.1.6/dist/d3-delaunay.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.6.0/proj4-src.js"></script>
+<script src="dist/greiner-hormann.js"></script>
+<!--<script src="bundle.js"></script>-->
+<!--<script src="https://raw.githubusercontent.com/voidqk/polybooljs/master/dist/polybool.min.js"></script>-->
 <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
         integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
         crossorigin=""></script>
@@ -158,19 +161,18 @@
     }
 
     // transforms long lat to lat long for leaflet
-    function reverseCoordinates(coordinates){
-        for(let i = 0; i < coordinates.length;i++){
-            if (Array.isArray(coordinates[i])){
-                coordinates[i] = reverseCoordinates(coordinates[i]);
-            }
-            else {
-                let temp = coordinates[i];
-                coordinates[i] = coordinates[i+1];
-                coordinates[i+1] = temp;
-                return coordinates;
+    function reverseCoordinates(coordinates) {
+        let result = [];
+        for (let i = 0; i < coordinates.length; i++) {
+            if (Array.isArray(coordinates[i])) {
+                result[i] = reverseCoordinates(coordinates[i]);
+            } else {
+                result[i] = coordinates[i + 1];
+                result[i + 1] = coordinates[i];
+                return result;
             }
         }
-        return coordinates;
+        return result;
     }
 
     function initialize() {
@@ -219,7 +221,7 @@
 
 
         let dustSensorsPromise = getDustSensorsByDate(2018, 7, 7);
-
+        let reverseStuttgartPolygon;
 
         $.getJSON('http://localhost:3000/landkreis', function (data) {
             let coordinates = data.features[0].geometry.coordinates[0]; // coordinates are nested arrays, there is only a single polygon
@@ -230,16 +232,16 @@
                 // console.log("after: " + point.toString());
             }
             let worldShadow = [
-                [90, -180],
-                [90, 180],
-                [-90, 180],
-                [-90, -180]];
+                [180, -90],
+                [180, 90],
+                [-180, 90],
+                [-180, -90]];
 
             // console.log(JSON.stringify(coordinates));
             data.features[0].geometry.coordinates[0] = coordinates;
-
             // adds large polygon before stuttgart to make it a cutout
             data.features[0].geometry.coordinates.unshift(worldShadow);
+            reverseStuttgartPolygon = data.features[0].geometry.coordinates;
             console.log(data);
             // console.log("new data: " + JSON.stringify(data));
             // Makes a stuttgart polygon
@@ -272,21 +274,40 @@
         });
         let delaunayPromise = drawVoronoi(dustSensorsPromise, 0, 50);
         delaunayPromise.then(delaunay => {
-            let bounds = [9.036,48.68972,9.3164,48.8697]; // xmin ymin xmax ymax
+            let bounds = [9.036, 48.68972, 9.3164, 48.8697]; // xmin ymin xmax ymax
             let voronoi = delaunay.voronoi(bounds);
             console.log("voronoi polygon:");
-            let itr  = voronoi.cellPolygons();
+            let itr = voronoi.cellPolygons();
 
-            for(let triangle of itr){
+            // console.log(reverseStuttgartPolygon);
+            let rr = reverseCoordinates(reverseStuttgartPolygon[1]);
+            console.log(rr);
+            // let a = [[50, 9], [50, 10], [45, 10], [45, 10]];
+            // console.log(a);
+            // let b = reverseCoordinates(Array.from(a));
+            // console.log(b);
+            // L.polygon(rr, {
+            //     "color": "#888888",
+            //     "weight": 5,
+            //     "fillOpacity": 0.5
+            // }).addTo(map);
+            // console.log(reverseStuttgartPolygon);
+            for (let triangle of itr) {
                 console.log(triangle);
-                console.log(reverseCoordinates(triangle));
+                // console.log(reverseCoordinates(triangle));
+                let reversedTriangle = reverseCoordinates(triangle);
+                console.log(reversedTriangle);
+                let cutTriangle = greinerHormann.intersection(reversedTriangle, rr);
+                // let cutTriangle = PolyBool.difference(triangle, stuttgartPolygon);
+                console.log(cutTriangle);
 
-
-                L.polygon(triangle, {
-                    color : "#dddddd",
-                    weight: 2,
-                    fillOpacity: 0
-                }).addTo(voronoiLayer);
+                if (cutTriangle != undefined){
+                    L.polygon(cutTriangle[0], {
+                        color: "#dddddd",
+                        weight: 2,
+                        fillOpacity: 0
+                    }).addTo(voronoiLayer);
+                }
             }
             // let coordinates = [];
             // for (let i = 0; i < voronoi.points.length - 1; i += 2) {
