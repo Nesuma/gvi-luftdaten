@@ -7,9 +7,11 @@
     <title>Leaflet</title>
     <link rel="stylesheet" type="text/css" href="//code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css" />
     <link rel="stylesheet" type="text/css" href="//cdn.leafletjs.com/leaflet-0.7/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css"
-        integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css"
+        integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
         crossorigin="" />
+
+
 
     <style>
         html,
@@ -40,6 +42,48 @@
             opacity: 1;
         }
 
+
+        #time-ranges {
+            position: fixed;
+            top: 43px;
+            left: 50%;
+            margin-right: -50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            padding: 1em;
+            background: white;
+            font-family: Helvetica Neue, Arial, Helvetica, sans-serif;
+        }
+
+        #time-ranges input {
+            display: inline-block;
+            border: 1px solid #999;
+            font-size: 14px;
+            border-radius: 4px;
+            height: 28px;
+            line-height: 28px;
+        }
+
+        #time-ranges input[type='submit'] {
+            box-sizing: content-box;
+            padding: 0 1em;
+            text-transform: uppercase;
+            color: white;
+            background: #5C7DB8;
+            border-color: #5C7DB8;
+        }
+
+        #to select {
+            padding: 0 1em;
+        }
+
+        #to {
+            font-size: 14px;
+            height: 30px;
+            padding: 0 1em;
+            text-transform: uppercase;
+        }
+
         #map_canvas {
             width: 100%;
             height: 100%;
@@ -53,18 +97,53 @@
 
 </head>
 
+
 <body onload="initialize()">
     <div id="map_canvas"></div>
-    <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
-        integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
+    <div id="time-ranges" class="leaflet-bar">
+        <form action="#" id="form">
+            <label for="from">
+                From
+                <input id="from" type="date" value="2020-01-17" name="from" min="2018-07-07">
+            </label>
+            <label for="to">
+                <label>Period
+                    <select id="to" name="top5">
+                        <option value="1">1 Day</option>
+                        <option value="2">2 Days</option>
+                        <option>3 Days</option>
+                        <option>4 Days</option>
+                        <option>5 Days</option>
+                    </select>
+                </label>
+            </label>
+            <input type="submit" value="Update">
+        </form>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
+        integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
         crossorigin=""></script>
-
     <script src="leaflet.rotatedMarker.js"></script>
     <link rel="stylesheet" href="dist/wind-js-leaflet.css" />
     <link rel="stylesheet" href="/demo/demo.css" />
     <script src="/dist/wind-js-leaflet.js"></script>
     <script src="SliderControl.js"></script>
     <script>
+        let timeForm = document.getElementById('form');
+        let dateInput = document.getElementById('from');
+        let periodInput = document.getElementById('to');       
+        from.max = new Date().toISOString().split("T")[0];
+        timeForm.addEventListener('submit', function updateTimeRange(e) {
+            let date = new Date(dateInput.value);
+            let period = periodInput.value;
+            console.log(date);
+            console.log(period);
+            setupWindApi(layerControl, date)
+            getDustSensorsByDate(date.year, date.month, date.day);
+            e.preventDefault();
+        });
+
+
         const geocodeUrl = 'https://nominatim.openstreetmap.org/search?q=';
         const geocodeParams = '&format=json&limit=1';
         let map = null;
@@ -90,7 +169,7 @@
             this.dust = dust
         }
         let dustsensors;
-
+        let layerControl;
         function initialize() {
             var Esri_WorldImagery = L.tileLayer(
                 "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -109,12 +188,13 @@
                 minZoom: 2,
                 maxZoom: 18
             });
-            map.addLayer(osm);
+            map.addLayer(Esri_WorldImagery);
 
+            let dustSensorsPromise = getDustSensorsByDate(2019, 1, 7);
 
             let background = { "Clear map": osm, Satellite: Esri_WorldImagery };
             let foreground = {};
-            let layerControl = L.control.layers(background).addTo(map);
+            layerControl = L.control.layers(background).addTo(map);
             let dao = new DataObject(20144, 50.814, 6.590, 0.82)
 
             $.getJSON('http://localhost:3000/wind/4928/2020-1-8-16-20', function (data) {
@@ -122,19 +202,27 @@
 
             })
 
+
             // L.marker([48.73, 9.2], {
             //     rotationAngle: 45,
             //     icon: windIcon
             // }).addTo(map);
+            let timestamp = new Time(08, 20);
+            console.log(timestamp);
 
-            currentData(layerControl)
-            setInterval(function () {
-                currentData(layerControl)
-            }, 300000)
+            //pastData(layerControl, timestamp);
+            // currentData(layerControl)
+            // setInterval(function () {
+            //     currentData(layerControl)
+            // }, 300000)
+            setupWindApi(layerControl, null)
 
-            
         }
 
+        function Time(hour, minute, second) {
+            this.hour = hour;
+            this.minute = minute;
+        }
 
         function addSlider(sensors) {
             console.log(dustsensors);
@@ -146,6 +234,14 @@
             sliderControl = L.control.sliderControl({ position: "topright", layer: layer, follow: true });
             map.addControl(sliderControl);//add slider to map
             sliderControl.startSlider();
+        }
+
+        async function getDustSensorsByDate(year, month, day) {
+            // $.getJSON('http://localhost:3000/dust/all/2018-7-7', function (data) {
+            return $.getJSON('http://localhost:3000/dust/all/' + year + "-" + month + "-" + day, function (data) {
+                console.log("received json");
+                return data;
+            })
         }
 
         function setupWindApi(layerControl, date) {
@@ -189,7 +285,34 @@
                 });
                 setupWindApi(layerControl, timestamp);
                 // let geojson_now = L.geoJson(array, { time: timestamp });
-               // addSlider();
+                // addSlider();
+            })
+        }
+
+        function pastData(layerControl, time) {
+            $.getJSON('http://localhost:3000/dust/all/2020-1-8', function (data) {
+                console.log(data);
+                let hour = time.hour;
+                let minute = time.minute;
+                dustsensors = L.layerGroup();
+                layerControl.addOverlay(dustsensors, "Feinstaub")
+                let number = 140;
+                console.log(data[number][hour][minute]);
+                console.log(data.length);
+                console.log(Object.entries(data));
+                for (let obj of Object.entries(data)) {
+                    if (obj[1][hour] != undefined && obj[1][hour][minute] != undefined) {
+                        let element = obj[1][hour][minute];
+                        console.log(element);
+                        let marker = L.marker([element.lat, element.lon], { time: (time.hour + time.minute) }).addTo(dustsensors);
+                        if (marker !== undefined) {
+                            marker.bindPopup("Sensor p1: " + element.p1 + " p2: " + element.p2 + "<br/> Time: " + time.hour + ":" + time.minute);
+                        }
+                    }
+                }
+
+                //setupWindApi(layerControl, timestamp);
+                // let geojson_now = L.geoJson(array, { time: timestamp });
 
 
             })
