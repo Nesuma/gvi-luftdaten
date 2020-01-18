@@ -351,6 +351,7 @@ async function startStaticFileAPI() {
     }));
     // app.use(express.static("polybooljs"));
     app.use(express.static("greinerHormann"));
+    app.use(express.static("public"));
     app.get("/leaflet.rotatedMarker.js", (req,res) => {
         res.sendFile(path.join(__dirname, "../leaflet.rotatedMarker.js"));
     });
