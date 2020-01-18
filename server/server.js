@@ -14,6 +14,11 @@ let separator = ';';
 
 let dateIndex = 1;
 
+app.use(function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
 //https://learnscraping.com/how-to-download-files-with-nodejs-using-request/
 // Sensor 13463
 
@@ -50,7 +55,7 @@ async function downloadCSV(date, sensorId, outputPath) {
                 // UnhandledPromiseRejectionWarning: TypeError: Cannot read property 'statusCode' of undefined
                 // console.log("undefined error: " + filename);
             } else if (err.response.statusCode === 404) {
-                 console.log(date + "/" + filename + " doesn't exist online");
+                console.log(date + "/" + filename + " doesn't exist online");
             } else {
                 console.log(err);
             }
@@ -150,7 +155,7 @@ class WindSensor extends Sensor {
             this.addDataPoint({
                 year: splitDate.year, month: splitDate.month,
                 day: splitDate.day, hour: splitDate.hour, minutes: splitDate.minutes
-            }, {speed: speed, direction: direction, lon: this.lon, lat: this.lat});
+            }, { speed: speed, direction: direction, lon: this.lon, lat: this.lat });
 
         }
     }
@@ -183,9 +188,9 @@ class DustSensor extends Sensor {
 
             // floorToTen necessary so that only values for minute 0,10,20,... are stored
             this.addDataPoint({
-                    year: splitDate.year, month: splitDate.month, day: splitDate.day,
-                    hour: splitDate.hour, minutes: floorToTen(splitDate.minutes)
-                }, {p1: p10, p2: p2_5, lon: this.lon, lat: this.lat}
+                year: splitDate.year, month: splitDate.month, day: splitDate.day,
+                hour: splitDate.hour, minutes: floorToTen(splitDate.minutes)
+            }, { p1: p10, p2: p2_5, lon: this.lon, lat: this.lat }
             );
 
         }
@@ -236,7 +241,7 @@ function getCoordinates(metadata) {
     let values = metadata[0].split(";");
     let lat = values[2].trim();
     let lon = values[3].trim();
-    return {lat: lat, lon: lon};
+    return { lat: lat, lon: lon };
 }
 
 async function getWindSensors() {
@@ -438,7 +443,7 @@ async function downloadDustFiles(sensorsPromise, dustIDs, outputPath) {
 
 async function startAPIS() {
     // alle windsensoren holen damit die ids gelistet werden können
-    app.get('/', function(req, res) {
+    app.get('/', function (req, res) {
         res.sendFile(path.join(__dirname, '/../index.html'));
 
     });

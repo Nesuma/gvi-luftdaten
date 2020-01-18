@@ -6,6 +6,7 @@ sandbox*
 *data
 *data.csv
 *.DS_Store
+data/*
 
 #Mac
 .DS_Store
