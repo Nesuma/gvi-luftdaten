@@ -50,7 +50,7 @@ async function downloadCSV(date, sensorId, outputPath) {
         // GET is what takes so long
         try {
             fs.writeFileSync(outputFilePath, await request_promise(options));
-            // console.log("downloaded " + filename);
+            console.log("downloaded " + filename);
         } catch (err) {
             if ((err === undefined) || (err.result === undefined)) {
                 // UnhandledPromiseRejectionWarning: TypeError: Cannot read property 'statusCode' of undefined
@@ -156,7 +156,7 @@ class WindSensor extends Sensor {
             this.addDataPoint({
                 year: splitDate.year, month: splitDate.month,
                 day: splitDate.day, hour: splitDate.hour, minutes: splitDate.minutes
-            }, { speed: speed, direction: direction, lon: this.lon, lat: this.lat });
+            }, {speed: speed, direction: direction, lon: this.lon, lat: this.lat});
 
         }
     }
@@ -189,9 +189,9 @@ class DustSensor extends Sensor {
 
             // floorToTen necessary so that only values for minute 0,10,20,... are stored
             this.addDataPoint({
-                year: splitDate.year, month: splitDate.month, day: splitDate.day,
-                hour: splitDate.hour, minutes: floorToTen(splitDate.minutes)
-            }, { p1: p10, p2: p2_5, lon: this.lon, lat: this.lat }
+                    year: splitDate.year, month: splitDate.month, day: splitDate.day,
+                    hour: splitDate.hour, minutes: floorToTen(splitDate.minutes)
+                }, {p1: p10, p2: p2_5, lon: this.lon, lat: this.lat}
             );
 
         }
@@ -207,7 +207,7 @@ function readFilesRecursively(dirName, files) {
     let fileNames = [];
     try {
         fileNames = fs.readdirSync(dirName);
-    }catch (e) {
+    } catch (e) {
         console.log("No directory " + dirName);
     }
     files = files || {};
@@ -216,7 +216,10 @@ function readFilesRecursively(dirName, files) {
         if (fs.statSync(dirName + "/" + filename).isDirectory()) {
             files = getAllFiles(dirName + "/" + filename, files)
         } else {
-            files[filename] = readFileAsync(dirName + filename, 'utf-8').catch(error => { console.log('caught', error.message); });; // async read call returns promise
+            files[filename] = readFileAsync(dirName + filename, 'utf-8').catch(error => {
+                console.log('caught', error.message);
+            });
+            ; // async read call returns promise
         }
     }
     return files;
@@ -247,7 +250,7 @@ function getCoordinates(metadata) {
     let values = metadata[0].split(";");
     let lat = values[2].trim();
     let lon = values[3].trim();
-    return { lat: lat, lon: lon };
+    return {lat: lat, lon: lon};
 }
 
 async function getWindSensors() {
@@ -428,9 +431,14 @@ async function downloadDustFiles(sensorsPromise, dustIDs, outputPath) {
 
     // let sensor = sensors[Object.keys(sensors)[0]]; // every sensor has data for the same dates, just take the first
     let activeDownloads = [];
+
     for (let key in sensors) {
         let sensor = sensors[key];
-        for (let year in sensor.measures) {
+        let keys = Object.keys(sensor.measures);
+        console.log(keys);
+        for (let i = keys.length - 1; i >= 0; i--) {
+            console.log("i = " + i);
+            let year = keys[i];
             for (let month in sensor.measures[year]) {
                 let twoDigitMonth = month; // march is written like 03 but 03 is not defined in months
                 if (month < 10) {
