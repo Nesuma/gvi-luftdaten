@@ -54,6 +54,7 @@
 <script src="dist/greiner-hormann.js"></script>
 <script src="polybool.js"></script>
 <script src="martinez.umd.js"></script>
+<script src="helper.js"></script>
 <!--<script src="https://raw.githubusercontent.com/voidqk/polybooljs/master/dist/polybool.min.js"></script>-->
 <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
         integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
@@ -91,7 +92,6 @@
     }
 
     let dustsensors;
-    let testLayer;
 
     async function getDustSensorsByDate(year, month, day) {
         // http://localhost:3000/dust/all/2018-7-7
@@ -103,181 +103,88 @@
 
     }
 
-    function getCoordConverter() {
-        let otherProjection = "+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs"; // projection to EPGS 25832
-
-        // proj4 with only 1 projection uses WGS84 as second default
-        // proj4 without coordinates returns object, that projects from first to second projection via forward or the other way with inverse
-        return proj4(otherProjection);
-    }
-
-    function getPoints(dustSensors, hour, minute) {
+    function getPoints(sensors) {
+        // this returns the coordinates in a linear array
         let points = [];
-        for (let key in dustSensors) {
-            try {
-                let entry = dustSensors[key][hour][minute];
-                points.push(parseFloat(entry.lon));
-                points.push(parseFloat(entry.lat));
-            } catch (err) {
-                console.log("sensor had no value for " + hour + ":" + minute);
-            }
-        }
-        return points;
-    }
-
-    function getColor(density) {
-        return density > 110 ? '#a10443' :
-            density > 90 ? '#b31847' :
-                density > 70 ? '#be2549' :
-                    density > 60 ? '#d5404b' :
-                        density > 50 ? '#de4d4a' :
-                            density > 40 ? '#eb6449' :
-                                density > 35 ? '#f3784c' :
-                                    density > 30 ? '#fba25d' :
-                                        density > 25 ? '#fcaf65' :
-                                            density > 18 ? '#f6faaf' :
-                                                density > 12 ? '#f6faaf' :
-                                                    density > 7 ? '#e8f6a4' :
-                                                        density > 3 ? '#b1dfa1' :
-                                                            density > 1 ? '#b1dfa1' :
-                                                                density > 0 ? '#73c3a7' :
-                                                                    '#888888';
-    }
-
-    function isDuplicate(sensors, entry) {
         for (let i = 0; i < sensors.length; i++) {
-            if ((sensors[i].lon === entry.lon) && (sensors[i].lat === entry.lat)) {
-                return true;
-            }
+            points.push(sensors[i].lon);
+            points.push(sensors[i].lat);
         }
-        return false;
-    }
-
-    // transforms long lat to lat long for leaflet
-    function reverseCoordinates(coordinates) {
-        let result = [];
-        for (let i = 0; i < coordinates.length; i++) {
-            if (Array.isArray(coordinates[i])) {
-                result[i] = reverseCoordinates(coordinates[i]);
-            } else {
-                result[i] = coordinates[i + 1];
-                result[i + 1] = coordinates[i];
-                return result;
-            }
-        }
-        return result;
+        return points
     }
 
     function filterWantedSensors(dustSensors, hour, minute, bounds, reverseStuttgartPolygon, p2) {
-        let momentSensors = [];
+        // dust sensors are all sensors with all measurements from 1 day
+        // this returns an array of sensors with values for the requested time only
+        let necessarySensors = [];
         for (let key in dustSensors) {
             try {
                 let entry = {};
                 let sensor = dustSensors[key][hour][minute];
                 entry.lon = parseFloat(sensor.lon);
                 entry.lat = parseFloat(sensor.lat);
-                // 10.1.2020 ids: 3651=2730
-                if (isDuplicate(momentSensors, entry)) {
+
+                // e.g. 10.1.2020 ids: 3651=2730 are duplicates
+                if ((isDuplicate(necessarySensors, entry)) ||
+                    (isOutsidePolygon(entry, reverseStuttgartPolygon))) {
                     continue;
                 }
+
                 entry.dust = (p2) ? sensor.p2 : sensor.p1;
                 entry.id = key;
-                momentSensors.push(entry);
+                necessarySensors.push(entry);
             } catch (e) {
                 // console.log(e);
                 console.log("no value for id: " + key + " hour: " + hour + " minute: " + minute);
             }
         }
-        addCells(momentSensors, bounds, reverseStuttgartPolygon);
-        return momentSensors;
+        addCells(necessarySensors, bounds, reverseStuttgartPolygon);
+        return necessarySensors;
     }
 
-    function addCells(wantedSensors, bounds, reverseStuttgartPolygon) {
-        console.log("adding cells");
-        let points = [];
-        for (let i = 0; i < wantedSensors.length; i++) {
-            points.push(wantedSensors[i].lon);
-            points.push(wantedSensors[i].lat);
-        }
+    function addCells(wantedSensors, bounds, stuttgartCutoutPolygon) {
+        // this calculates the cell surrounding the center by intersection with the Stuttgart polygon
+        let delaunay = new d3.Delaunay(getPoints(wantedSensors));
 
-        let delaunay = new d3.Delaunay(points);
-
-        let voronoi = delaunay.voronoi();
-        // let voronoi = delaunay.voronoi(bounds);
+        let voronoi = delaunay.voronoi(bounds);
 
         let cells = voronoi.cellPolygons();
         let i = 0;
-        console.log("[reverseCoordinates(reverseStuttgartPolygon)]");
-        console.log([reverseCoordinates(reverseStuttgartPolygon)]);
         for (let cell of cells) {
-            let reversedCell = reverseCoordinates(cell);
-            console.log("reversedCell");
-            console.log(reversedCell);
-
-            // martinez seems to have a bug, this is a workaround
-            let intersection = reversedCell;
-            try {
-                 intersection = martinez.intersection([reversedCell], [reverseCoordinates(reverseStuttgartPolygon)]);
-            } catch (e) {
-                console.log(e);
-            }
-            wantedSensors[i].cell =intersection;
-
-            // this is another intersection from a different library. Working but much slower
-            // wantedSensors[i].cell = PolyBool.intersect(
-            //     {
-            //         regions: [reversedCell],
-            //         inverted: false
-            //     }, {
-            //         regions: [reverseCoordinates(reverseStuttgartPolygon)],
-            //         inverted: false
-            //     }
-            // ).regions;
-
-            console.log("wantedSensors[i].cell");
-            console.log(wantedSensors[i].cell);
+            wantedSensors[i].cell = intersection(cell,stuttgartCutoutPolygon);
             i++;
-            // if(i==9){
-            //     break;
-            // }
         }
     }
 
     async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, voronoiLayer, centerLayer, p2) {
-        p2 = true;
         let dustSensors = await dustSensorPromise;
 
         let bounds = [9.036, 48.68972, 9.3164, 48.8697];
-        // let bounds = [5,45,15,55];
-        let wantedSensors = filterWantedSensors(dustSensors, hour, minute, bounds, reverseStuttgartPolygon, p2);
 
-        console.log("wantedSensors");
-        console.log(wantedSensors);
+        let wantedSensors = filterWantedSensors(dustSensors, hour, minute, bounds, reverseStuttgartPolygon, p2);
 
         for (let i = 0; i < wantedSensors.length; i++) {
             let sensor = wantedSensors[i];
             let cell = sensor.cell;
             if ((cell !== undefined) && (cell !== null)) {
-                // console.log("cell");
-                // console.log(cell);
-                let p = L.polygon(cell, {
+                let polygon = L.polygon(cell, {
                     fillColor: getColor(sensor.dust),
                     color: "#222222",
                     weight: 2,
                     fillOpacity: 0.6
                 });
-                p.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
-                p.addTo(voronoiLayer);
+                polygon.bindPopup("Polygon #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
+                polygon.addTo(voronoiLayer);
             } else {
-                console.log("big oof");
+                console.log("No polygon for sensor, possibly out of area");
                 console.log(sensor)
             }
-            let r = L.rectangle([[sensor.lat, sensor.lon], [sensor.lat, sensor.lon]], {
-                color: "#ffffff",
-                weight: 5
+            let center = L.rectangle([[sensor.lat, sensor.lon], [sensor.lat, sensor.lon]], {
+                color: "#222222",
+                weight: 3
             });
-            r.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
-            r.addTo(centerLayer);
+            center.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
+            center.addTo(centerLayer);
         }
     }
 
@@ -303,13 +210,12 @@
         return stuttgartGeoJSON;
     }
 
-
     function addLayer(stuttgartGeoJSON, stuttgart) {
         L.geoJSON(stuttgartGeoJSON.features, {
             style: {
                 "color": "#222222",
                 "weight": 5,
-                "fillOpacity": 0.8
+                "fillOpacity": 0.5
             }
         }).addTo(stuttgart);
     }
@@ -342,27 +248,18 @@
         let voronoiLayer = L.layerGroup().addTo(map);
         let centerLayer = L.layerGroup().addTo(map);
         let stuttgartLayer = L.layerGroup().addTo(map);
-        testLayer = L.layerGroup().addTo(map);
-
 
         getStuttgartPolygons().then((stuttgartGeoJSON) => {
-            console.log("stuttgartGeoJSON");
-            console.log(stuttgartGeoJSON);
             addLayer(stuttgartGeoJSON, stuttgartLayer);
-            // start slider with reverseStuttgart?
+            // start slider here
             let year = 2020;
             let month = 1;
             let day = 1;
-            let hour = 3;
+            let hour = 15;
             let minute = 50;
             let dustSensorsPromise = getDustSensorsByDate(year, month, day);
             drawVoronoi(dustSensorsPromise, hour, minute, stuttgartGeoJSON.features[0].geometry.coordinates[1], voronoiLayer, centerLayer);
         });
-
-        // let reverseStuttgartPromise = getStuttgartPolygons();
-
-        // hier hätte ich lieber 1 funktion draw voronoi statt beidem
-
 
         let background = {Satellite: Esri_WorldImagery, "Clear map": osm};
         let foreground = {

@@ -338,35 +338,13 @@ async function startWindAPI(sensorsPromise) {
 async function startStaticFileAPI() {
     app.get("/landkreis", async (req, res) => {
         res.sendFile(path.join(__dirname, "../data/shapes/utm32.json"));
-        // let shapefiles = await readFilesRecursively("../data/shapes/");
-        // console.log(shapefiles);
-        // for (let shapefile in shapefiles) {
-        //     res.send((JSON.parse(await shapefiles[shapefile])));
-        // }
     });
     app.use(csp({
         directives: {
             defaultSrc: [`'self'`]
         }
     }));
-    // app.use(express.static("polybooljs"));
-    app.use(express.static("greinerHormann"));
     app.use(express.static("public"));
-    app.get("/leaflet.rotatedMarker.js", (req,res) => {
-        res.sendFile(path.join(__dirname, "../leaflet.rotatedMarker.js"));
-    });
-    // app.get("/dist/wind-js-leaflet.css", (req,res) => {
-    //     res.sendFile(path.join(__dirname, "../dist/wind-js-leaflet.css"));
-    // });
-    app.get("/demo/demo.css", (req,res) => {
-        res.sendFile(path.join(__dirname, "../demo/demo.css"));
-    });
-    // app.get("/dist/wind-js-leaflet.js", (req,res) => {
-    //     res.sendFile(path.join(__dirname, "../dist/wind-js-leaflet.js"));
-    // });
-    app.get("/proj4leaflet.js", (req,res) => {
-        res.sendFile(path.join(__dirname, "../proj4leaflet.js"));
-    });
 }
 
 // async function startDustAPI(dustIDs, sensors) {
