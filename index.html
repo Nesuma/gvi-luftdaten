@@ -166,7 +166,15 @@
         let dateInput = document.getElementById('from');
         let periodInput = document.getElementById('to');
         from.max = new Date().toISOString().split("T")[0];
+        to.max = new Date().toISOString().split("T")[0];
         to.value = from.max;
+        to.min = from.value;
+        $('#from').change(function () {
+            let periodInput = document.getElementById('to');
+            let dateInput = document.getElementById('from');
+            to.min = from.value;
+        });
+
         timeForm.addEventListener('submit', function updateTimeRange(e) {
             console.log(dateInput.value);
 
@@ -408,18 +416,9 @@
             }
             $('.slider-time').html(formatDT(start));
 
-            //Prepare time for slider
-            // let start_date = new Date(start);
-            // let end_date = new Date(end);
-            // console.log(range);
-
-            // end_date.setDate(end_date.getDate() + range);
             let min_val = new Date(start) / 1000;
             let max_val = new Date(end) / 1000;
             tempval = min_val;
-
-            console.log(min_val + " " + max_val);
-
 
             function zeroPad(num, places) {
                 var zero = places - num.toString().length + 1;
