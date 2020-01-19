@@ -177,17 +177,11 @@
 
         let date = new Date(dateInput.value);
         console.log(date);
-
         let period = periodInput.value;
-        console.log(date);
         console.log(period);
         // WindJSLeaflet._clearWind();
-        if (velocityLayer != undefined) {
-            layerControl.removeLayer(velocityLayer);
-            map.removeLayer(velocityLayer);
-        }
-        setupSlider(date, date.getDate + period);
-        setupWindApi(layerControl, date);
+        
+        setupSlider(date, period);
         //getDustSensorsByDate(date.year, date.month, date.day);
         e.preventDefault();
     });
@@ -396,7 +390,7 @@
             "Voronoi": voronoiLayer,
             "Centers": centerLayer,
         };
-        let layerControl = L.control.layers(background, foreground, {collapsed: false}).addTo(map);
+        layerControl = L.control.layers(background, foreground, {collapsed: false}).addTo(map);
 
         //pastData(layerControl, timestamp);
         // currentData(layerControl)
@@ -408,15 +402,19 @@
         setupWindApi(layerControl, today);
     }
 
-    function setupSlider() {
-        let start = "2020-01-18 00:00:00";
-        let range = 5;
+    function setupSlider(start, range) {
+        if(start == undefined) {
+            start = new Date();
+        }
+        if(range == undefined) {
+            range = 1;
+        }
+        $('.slider-time').html(formatDT(start));
 
-        $('.slider-time').html(start);
-
+        //Prepare time for slider
         let start_date = new Date(start);
         let end_date = start_date;
-        end_date.setDate(end_date.getDate() + 5);
+        end_date.setDate(end_date.getDate() + range);
         let min_val = new Date(start) / 1000;
         let max_val = end_date / 1000;
         console.log(start_date + "" + end_date);
@@ -450,35 +448,35 @@
             step: 600,
             values: [min_val],
             slide: function (e, ui) {
-                var currentDate = new Date(ui.values[0] * 1000); //.format("yyyy-mm-dd hh:ii:ss");
-                console.log(currentDate);
-
-                $('.slider-time').html(formatDT(currentDate));
-
+                let currentTime = new Date(ui.values[0] * 1000); //.format("yyyy-mm-dd hh:ii:ss");
+                let formattedTime = formatDT(currentTime);
+                $('.slider-time').html(formattedTime);
+                console.log(formattedTime);
+                
+                setupWindApi(new Date(formattedTime))
 
             }
         });
     }
 
-    function addSlider(sensors) {
-        console.log(dustsensors);
-        var marker1 = L.marker([51.5, -0.09], {time: "2013-01-22 08:42:26+01"});
-        var marker2 = L.marker([51.6, -0.09], {time: "2013-01-22 10:00:26+01"});
-        var marker3 = L.marker([51.7, -0.09], {time: "2013-01-22 10:03:29+01"});
-        layer = L.layerGroup([dustsensors, marker1, marker2])
-        //initiate slider, follow = 1 means, show one feature at a time
-        sliderControl = L.control.sliderControl({position: "topright", layer: layer, follow: true});
-        map.addControl(sliderControl);//add slider to map
-        sliderControl.startSlider();
-    }
-
     let velocityLayer;
-    function setupWindApi(layerControl, date) {
+    function setupWindApi(date) {
         // var handleError = function (err) {
         //     console.log('handleError...');
         //     console.log(err);
         // };
-
+        if (velocityLayer != undefined) {
+            console.log("here");
+            
+            layerControl.removeLayer(velocityLayer);
+            map.removeLayer(velocityLayer);
+            console.log(layerControl);
+            
+        }
+        console.log(date);
+        console.log(velocityLayer);
+        
+        
         // WindJSLeaflet.init({
         //     localMode: false,
         //     map: map,
@@ -497,6 +495,8 @@
         //     nearestUrl: 'http://localhost:7000/nearest',
         //     errorCallback: handleError
         // });
+        console.log(date);
+        
         $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=3", function (data) {
             velocityLayer = L.velocityLayer({
                 displayValues: true,
