@@ -128,9 +128,9 @@
         integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
         crossorigin=""></script>
 <script src="leaflet.rotatedMarker.js"></script>
-<!--<link rel="stylesheet" href="dist/wind-js-leaflet.css"/>-->
+<link rel="stylesheet" href="dist/wind-js-leaflet.css"/>
 <link rel="stylesheet" href="demo/demo.css"/>
-<!--<script src="/dist/wind-js-leaflet.js"></script>-->
+<script src="/dist/wind-js-leaflet.js"></script>
 <script src="SliderControl.js"></script>
 <script>
     let timeForm = document.getElementById('form');
@@ -142,8 +142,8 @@
         let period = periodInput.value;
         console.log(date);
         console.log(period);
-        setupWindApi(layerControl, date)
-        getDustSensorsByDate(date.year, date.month, date.day);
+        setupWindApi(layerControl, date);
+        getDustSensorsByDate(date.getYear(), date.getMonth(), date.getDay());
         e.preventDefault();
     });
 
@@ -299,23 +299,25 @@
                 minZoom: 12
             }
         );
-
-
-        let center = L.latLng(48.8, 9.2);
-        let zoom = 11;
-        map = L.map('map_canvas').setView(center, zoom);
         let osm = new L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
             minZoom: 12,
             maxZoom: 2,
             renderer: L.svg(),
         });
+
+        let center = L.latLng(48.8, 9.2);
+        let zoom = 11;
+        map = L.map('map_canvas').setView(center, zoom);
+
+        console.log(osm);
+        map.addLayer(osm);
         map.addLayer(Esri_WorldImagery);
 
         dustsensors = L.layerGroup().addTo(map);
         let voronoiLayer = L.layerGroup().addTo(map);
-        let centerLayer = L.layerGroup();
         let stuttgartLayer = L.layerGroup().addTo(map);
+        let centerLayer = L.layerGroup();
 
         getStuttgartPolygons().then((stuttgartGeoJSON) => {
             addLayer(stuttgartGeoJSON, stuttgartLayer);
@@ -329,7 +331,7 @@
             drawVoronoi(dustSensorsPromise, hour, minute, stuttgartGeoJSON.features[0].geometry.coordinates[1], voronoiLayer, centerLayer);
         });
 
-        let background = {Satellite: Esri_WorldImagery, "Clear map": osm};
+        let background = {"Clear map": osm,Satellite: Esri_WorldImagery};
         let foreground = {
             "Feinstaubsensoren": dustsensors,
             "Voronoi": voronoiLayer,
@@ -379,24 +381,24 @@
             console.log(err);
         };
 
-        // WindJSLeaflet.init({
-        //     localMode: false,
-        //     map: map,
-        //     layerControl: layerControl,
-        //     useNearest: true, //nearest to Time
-        //     timeISO: date, //=currentTime
-        //     nearestDaysLimit: 3,
-        //     displayValues: true,
-        //     displayOptions: {
-        //         displayPosition: 'bottomleft',
-        //         displayEmptyString: 'No wind data'
-        //     },
-        //     overlayName: 'Wind',
-        //     pingUrl: 'http://localhost:7000/alive',        // url to check service availability
-        //     latestUrl: 'http://localhost:7000/latest',     // url to get latest data with no required params
-        //     nearestUrl: 'http://localhost:7000/nearest',
-        //     errorCallback: handleError
-        // });
+        WindJSLeaflet.init({
+            localMode: false,
+            map: map,
+            layerControl: layerControl,
+            useNearest: true, //nearest to Time
+            timeISO: date, //=currentTime
+            nearestDaysLimit: 3,
+            displayValues: true,
+            displayOptions: {
+                displayPosition: 'bottomleft',
+                displayEmptyString: 'No wind data'
+            },
+            overlayName: 'Wind',
+            pingUrl: 'http://localhost:7000/alive',        // url to check service availability
+            latestUrl: 'http://localhost:7000/latest',     // url to get latest data with no required params
+            nearestUrl: 'http://localhost:7000/nearest',
+            errorCallback: handleError
+        });
     }
 
 

@@ -40,6 +40,24 @@ function getColor(density) {
                                                             density > 0 ? '#73c3a7' :
                                                                 '#888888';
 }
+// function getColor(density) {
+//     return density > 350 ? '#330000' :
+//         density > 275 ? '#660000' :
+//             density > 225 ? '#990000' :
+//                 density > 175 ? '#cc0000' :
+//                     density > 125 ? '#ff0000' :
+//                         density > 75 ? '#ff3333' :
+//                             density > 60 ? '#ff6666' :
+//                                 density > 50 ? '#80ffaa' :
+//                                     density > 40 ? '#4dff88' :
+//                                         density > 35 ? '#1aff66' :
+//                                             density > 30  ? '#00e64d' :
+//                                                 density > 25 ? '#00b33c' :
+//                                                     density > 20 ? '#00802b' :
+//                                                         density > 10 ? '#004d1a' :
+//                                                             density > 0 ? '#001a09' :
+//                                                                 '#888888';
+// }
 
 
 
