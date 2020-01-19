@@ -137,15 +137,8 @@
                 <input id="from" type="date" value="2020-01-17" name="from" min="2018-07-07">
             </label>
             <label for="to">
-                <label>Period
-                    <select id="to" name="top5">
-                        <option value="1">1 Day</option>
-                        <option value="2">2 Days</option>
-                        <option>3 Days</option>
-                        <option>4 Days</option>
-                        <option>5 Days</option>
-                    </select>
-                </label>
+                To
+                <input id="to" type="date" value="2020-01-17" name="to" min="2018-07-07">
             </label>
             <input type="submit" value="Update">
         </form>
@@ -173,13 +166,13 @@
         let dateInput = document.getElementById('from');
         let periodInput = document.getElementById('to');
         from.max = new Date().toISOString().split("T")[0];
-        from.value = from.max;
+        to.value = from.max;
         timeForm.addEventListener('submit', function updateTimeRange(e) {
             console.log(dateInput.value);
 
             let date = new Date(dateInput.value);
             console.log(date);
-            let period = periodInput.value;
+            let period = new Date(periodInput.value);
             console.log(period);
             // WindJSLeaflet._clearWind();
 
@@ -406,27 +399,25 @@
             // setupWindApi(layerControl, today);
         }
         let tempval;
-
-
-        function setupSlider(start, range) {
+        function setupSlider(start, end) {
             if (start == undefined) {
                 start = new Date();
             }
-            if (range == undefined) {
-                range = 1;
+            if (end == undefined) {
+                end = new Date();
             }
             $('.slider-time').html(formatDT(start));
 
             //Prepare time for slider
-            let start_date = new Date(start);
-            let end_date = start_date;
-            end_date.setDate(end_date.getDate() + range);
+            // let start_date = new Date(start);
+            // let end_date = new Date(end);
+            // console.log(range);
+
+            // end_date.setDate(end_date.getDate() + range);
             let min_val = new Date(start) / 1000;
-            let max_val = end_date / 1000;
-            console.log(start_date + "" + end_date);
+            let max_val = new Date(end) / 1000;
             tempval = min_val;
 
-            $('.slider-time2').html(formatDT(end_date));
             console.log(min_val + " " + max_val);
 
 
@@ -457,8 +448,8 @@
                     let currentTime = new Date(ui.values[0] * 1000); //.format("yyyy-mm-dd hh:ii:ss");
                     let formattedTime = formatDT(currentTime);
                     $('.slider-time').html(formattedTime);
-                    
-                    if(Math.abs(ui.values[0] - tempval) > 21600) {                        
+
+                    if (Math.abs(ui.values[0] - tempval) > 21600) {
                         setupWindApi(new Date(formattedTime))
                         tempval = ui.values[0];
                     }
@@ -472,7 +463,6 @@
                     map.removeLayer(foreground["Wind"]);
                     layerControl.removeLayer(foreground["Wind"]);
                 }
-                console.log("doing smth");
                 let velocityLayer = L.velocityLayer({
                     displayValues: true,
                     displayOptions: {
