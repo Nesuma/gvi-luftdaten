@@ -137,15 +137,8 @@
             <input id="from" type="date" value="2020-01-17" name="from" min="2018-07-07">
         </label>
         <label for="to">
-            <label>Period
-                <select id="to" name="top5">
-                    <option value="1">1 Day</option>
-                    <option value="2">2 Days</option>
-                    <option>3 Days</option>
-                    <option>4 Days</option>
-                    <option>5 Days</option>
-                </select>
-            </label>
+            To
+            <input id="to" type="date" value="2020-01-17" name="to" min="2018-07-07">
         </label>
         <input type="submit" value="Update">
     </form>
@@ -169,6 +162,20 @@
 <script src="dist/leaflet-velocity.js"></script>
 <link rel="stylesheet" type="text/css" href="//code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css"/>
 <script>
+    let timeForm = document.getElementById('form');
+    let dateInput = document.getElementById('from');
+    let periodInput = document.getElementById('to');
+    from.max = new Date().toISOString().split("T")[0];
+    to.max = new Date().toISOString().split("T")[0];
+    to.value = from.max;
+    to.min = from.value;
+    $('#from').change(function () {
+        let periodInput = document.getElementById('to');
+        let dateInput = document.getElementById('from');
+        to.min = from.value;
+    });
+
+
     const geocodeUrl = 'https://nominatim.openstreetmap.org/search?q=';
     const geocodeParams = '&format=json&limit=1';
     let map = null;
@@ -199,16 +206,6 @@
     let layerControl;
     let foreground;
 
-    async function getDustSensorsByDate(year, month, day) {
-        // http://localhost:3000/dust/all/2018-7-7
-        // will need a converter from live data to regular data
-        return $.getJSON('http://localhost:3000/dust/all/' + year + "-" + month + "-" + day, function (data) {
-            console.log("received json");
-            // return data;
-        });
-
-    }
-
     function getPoints(sensors) {
         // this returns the coordinates in a linear array
         let points = [];
@@ -217,6 +214,15 @@
             points.push(sensors[i].lat);
         }
         return points
+    }
+
+    async function getDustSensorsByDate(year, month, day) {
+        // http://localhost:3000/dust/all/2018-7-7
+        // will need a converter from live data to regular data
+        return $.getJSON('http://localhost:3000/dust/all/' + year + "-" + month + "-" + day, function (data) {
+            console.log("received json");
+            // return data;
+        });
     }
 
     function filterWantedSensors(dustSensors, hour, minute, bounds, reverseStuttgartPolygon, p2) {
@@ -241,7 +247,7 @@
                 necessarySensors.push(entry);
             } catch (e) {
                 // console.log(e);
-                // console.log("no value for id: " + key + " hour: " + hour + " minute: " + minute);
+                console.log("no value for id: " + key + " hour: " + hour + " minute: " + minute);
             }
         }
         addCells(necessarySensors, bounds, reverseStuttgartPolygon);
@@ -261,6 +267,7 @@
             i++;
         }
     }
+
 
     async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, p2) {
         let centerLayer = L.layerGroup();
@@ -378,7 +385,7 @@
                 console.log(period);
                 // WindJSLeaflet._clearWind();
 
-                setupSlider(date, period,stuttgartGeoJSON);
+                setupSlider(date, period, stuttgartGeoJSON);
                 //getDustSensorsByDate(date.year, date.month, date.day);
                 e.preventDefault();
             });
@@ -406,43 +413,26 @@
         // setupWindApi(layerControl, today);
     }
 
-    function setupSlider(start, range,stuttgartGeoJSON) {
+    let tempval;
+
+    function setupSlider(start, end,stuttgartGeoJSON) {
         if (start == undefined) {
             start = new Date();
         }
-        if (range == undefined) {
-            range = 1;
+        if (end == undefined) {
+            end = new Date();
         }
         $('.slider-time').html(formatDT(start));
 
-        //Prepare time for slider
-        let start_date = new Date(start);
-        let end_date = start_date;
-        end_date.setDate(end_date.getDate() + range);
         let min_val = new Date(start) / 1000;
-        let max_val = end_date / 1000;
-        console.log(start_date + "" + end_date);
-
-
-        $('.slider-time2').html(formatDT(end_date));
-        console.log(min_val + " " + max_val);
-
+        let max_val = new Date(end) / 1000;
+        tempval = min_val;
 
         function zeroPad(num, places) {
             var zero = places - num.toString().length + 1;
             return Array(+(zero > 0 && zero)).join("0") + num;
         }
 
-        function formatDTO(fullDate) {
-            let formDate = {};
-            formDate.year = fullDate.getFullYear();
-            formDate.month = zeroPad(fullDate.getMonth() + 1, 2);
-            formDate.date = zeroPad(fullDate.getDate(), 2);
-            formDate.hours = zeroPad(fullDate.getHours(), 2);
-            formDate.minutes = zeroPad(fullDate.getMinutes(), 2);
-            formDate.seconds = zeroPad(fullDate.getSeconds(), 2);
-            return formDate;
-        };
         function formatDT(fullDate) {
             var year = fullDate.getFullYear();
             console.log(fullDate.getMonth() + 1);
@@ -459,16 +449,18 @@
             range: false,
             min: min_val,
             max: max_val,
-            step: 600,
+            step: 600, //in seconds --> 6min
             values: [min_val],
             slide: function (e, ui) {
                 let currentTime = new Date(ui.values[0] * 1000); //.format("yyyy-mm-dd hh:ii:ss");
                 let formattedTime = formatDT(currentTime);
                 $('.slider-time').html(formattedTime);
 
-                console.log("asking for dust");
-                console.log(currentTime.getFullYear() + " " +currentTime.getMonth()+1+ " " + currentTime.getDate())
-                let dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth()+1, currentTime.getDate());
+                if (Math.abs(ui.values[0] - tempval) > 21600) {
+                    setupWindApi(new Date(formattedTime))
+                    tempval = ui.values[0];
+                }
+                let dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
                 let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
                 layersPromise.then(layers => {
                     console.log("doing");
@@ -489,13 +481,9 @@
                     layerControl.addOverlay(foreground[center], center);
                     map.addLayer(foreground[center]);
                 });
-                setupWindApi(new Date(formattedTime));
             }
         });
     }
-
-    // let velocityLayer;
-
 
     function setupWindApi(date) {
         $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=3", function (data) {
@@ -521,40 +509,7 @@
             layerControl.addOverlay(foreground["Wind"], "Wind");
             map.addLayer(foreground["Wind"]);
         });
-
-        // if (map.hasLayer(velocityLayer)) {
-        //     console.log("true");
-        //     velocityLayer.onRemove();
-        //     layerControl.removeLayer(velocityLayer);
-        //     map.removeLayer(velocityLayer);
-        // }
-        // console.log(date);
-        // console.log(velocityLayer);
-
-
-        // WindJSLeaflet.init({
-        //     localMode: false,
-        //     map: map,
-        //     layerControl: layerControl,
-        //     useNearest: true, //nearest to Time
-        //     timeISO: date, //=currentTime
-        //     nearestDaysLimit: 3,
-        //     displayValues: true,
-        //     displayOptions: {
-        //         displayPosition: 'bottomleft',
-        //         displayEmptyString: 'No wind data'
-        //     },
-        //     overlayName: 'Wind',
-        //     pingUrl: 'http://localhost:7000/alive',        // url to check service availability
-        //     latestUrl: 'http://localhost:7000/latest',     // url to get latest data with no required params
-        //     nearestUrl: 'http://localhost:7000/nearest',
-        //     errorCallback: handleError
-        // });
-        // console.log(date);
-
-
     }
-
 
     function currentData(layerControl) {
         $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
@@ -567,11 +522,8 @@
                 if (marker !== undefined) {
                     marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + timestamp);
                 }
-                // dustsensors.add({time: "2013-01-22 12:03:29+01"})
             });
             setupWindApi(layerControl, timestamp);
-            // let geojson_now = L.geoJson(array, { time: timestamp });
-            // addSlider();
         })
     }
 
