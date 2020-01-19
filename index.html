@@ -52,8 +52,8 @@
 <script src="https://unpkg.com/d3-delaunay@5.1.6/dist/d3-delaunay.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.6.0/proj4-src.js"></script>
 <script src="dist/greiner-hormann.js"></script>
-<!--<script src="bundle.js"></script>-->
-<script src="martinez.min.js"></script>
+<script src="polybool.js"></script>
+<script src="martinez.umd.js"></script>
 <!--<script src="https://raw.githubusercontent.com/voidqk/polybooljs/master/dist/polybool.min.js"></script>-->
 <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
         integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
@@ -135,27 +135,41 @@
                                 density > 35 ? '#f3784c' :
                                     density > 30 ? '#fba25d' :
                                         density > 25 ? '#fcaf65' :
-                                            density > 20 ? '#f6faaf' :
-                                                density > 15 ? '#f6faaf' :
-                                                    density > 10 ? '#e8f6a4' :
-                                                        density > 5 ? '#b1dfa1' :
-                                                            density > 3 ? '#b1dfa1' :
+                                            density > 18 ? '#f6faaf' :
+                                                density > 12 ? '#f6faaf' :
+                                                    density > 7 ? '#e8f6a4' :
+                                                        density > 3 ? '#b1dfa1' :
+                                                            density > 1 ? '#b1dfa1' :
                                                                 density > 0 ? '#73c3a7' :
                                                                     '#888888';
     }
 
-    function isDuplicate(sensors, entry){
-        for(let i = 0; i < sensors.length; i++){
-            if((sensors[i].lon === entry.lon)&&(sensors[i].lat === entry.lat)){
+    function isDuplicate(sensors, entry) {
+        for (let i = 0; i < sensors.length; i++) {
+            if ((sensors[i].lon === entry.lon) && (sensors[i].lat === entry.lat)) {
                 return true;
             }
         }
         return false;
     }
 
+    // transforms long lat to lat long for leaflet
+    function reverseCoordinates(coordinates) {
+        let result = [];
+        for (let i = 0; i < coordinates.length; i++) {
+            if (Array.isArray(coordinates[i])) {
+                result[i] = reverseCoordinates(coordinates[i]);
+            } else {
+                result[i] = coordinates[i + 1];
+                result[i + 1] = coordinates[i];
+                return result;
+            }
+        }
+        return result;
+    }
+
     function filterWantedSensors(dustSensors, hour, minute, bounds, reverseStuttgartPolygon, p2) {
         let momentSensors = [];
-        let i = 0;
         for (let key in dustSensors) {
             try {
                 let entry = {};
@@ -163,21 +177,15 @@
                 entry.lon = parseFloat(sensor.lon);
                 entry.lat = parseFloat(sensor.lat);
                 // 10.1.2020 ids: 3651=2730
-                if(isDuplicate(momentSensors,entry)){
+                if (isDuplicate(momentSensors, entry)) {
                     continue;
                 }
                 entry.dust = (p2) ? sensor.p2 : sensor.p1;
-                // entry.dust = parseFloat(sensor.p2) + parseFloat(sensor.p1);
                 entry.id = key;
-                // console.log(JSON.stringify(entry));
                 momentSensors.push(entry);
-                i++;
-                // if (i === 250) {
-                //     break;
-                // }
             } catch (e) {
                 // console.log(e);
-                // console.log("id: " + key + " hour: " + hour + " minute: " + minute);
+                console.log("no value for id: " + key + " hour: " + hour + " minute: " + minute);
             }
         }
         addCells(momentSensors, bounds, reverseStuttgartPolygon);
@@ -185,16 +193,12 @@
     }
 
     function addCells(wantedSensors, bounds, reverseStuttgartPolygon) {
+        console.log("adding cells");
         let points = [];
         for (let i = 0; i < wantedSensors.length; i++) {
             points.push(wantedSensors[i].lon);
             points.push(wantedSensors[i].lat);
         }
-        console.log("array comparison");
-        console.log(wantedSensors.length );
-        console.log(points.length );
-
-
 
         let delaunay = new d3.Delaunay(points);
 
@@ -203,15 +207,40 @@
 
         let cells = voronoi.cellPolygons();
         let i = 0;
+        console.log("[reverseCoordinates(reverseStuttgartPolygon)]");
+        console.log([reverseCoordinates(reverseStuttgartPolygon)]);
         for (let cell of cells) {
             let reversedCell = reverseCoordinates(cell);
-            // console.log(wantedSensors[i].id);
-            wantedSensors[i].cell = martinez.intersection([reversedCell], [reverseCoordinates(reverseStuttgartPolygon)]);
-            // wantedSensors[i].cell = reversedCell;
-            // console.log(wantedSensors[i].cell);
+            console.log("reversedCell");
+            console.log(reversedCell);
+
+            // martinez seems to have a bug, this is a workaround
+            let intersection = reversedCell;
+            try {
+                 intersection = martinez.intersection([reversedCell], [reverseCoordinates(reverseStuttgartPolygon)]);
+            } catch (e) {
+                console.log(e);
+            }
+            wantedSensors[i].cell =intersection;
+
+            // this is another intersection from a different library. Working but much slower
+            // wantedSensors[i].cell = PolyBool.intersect(
+            //     {
+            //         regions: [reversedCell],
+            //         inverted: false
+            //     }, {
+            //         regions: [reverseCoordinates(reverseStuttgartPolygon)],
+            //         inverted: false
+            //     }
+            // ).regions;
+
+            console.log("wantedSensors[i].cell");
+            console.log(wantedSensors[i].cell);
             i++;
+            // if(i==9){
+            //     break;
+            // }
         }
-        console.log("i " + i);
     }
 
     async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, voronoiLayer, centerLayer, p2) {
@@ -226,12 +255,11 @@
         console.log(wantedSensors);
 
         for (let i = 0; i < wantedSensors.length; i++) {
-            console.log(i);
             let sensor = wantedSensors[i];
             let cell = sensor.cell;
             if ((cell !== undefined) && (cell !== null)) {
-                console.log("cell");
-                console.log(cell);
+                // console.log("cell");
+                // console.log(cell);
                 let p = L.polygon(cell, {
                     fillColor: getColor(sensor.dust),
                     color: "#222222",
@@ -246,19 +274,11 @@
             }
             let r = L.rectangle([[sensor.lat, sensor.lon], [sensor.lat, sensor.lon]], {
                 color: "#ffffff",
-                weight: 15
+                weight: 5
             });
             r.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
             r.addTo(centerLayer);
         }
-
-
-        // addCells(dustSensors,hour,minute,bounds);
-        // console.log("final dustSensors");
-        // console.log(dustSensors);
-
-
-        // drawPolygons(voronoi, voronoiLayer, reverseStuttgartPolygon);
     }
 
     async function getStuttgartPolygons() {
@@ -281,21 +301,6 @@
         // adds large polygon before stuttgart to make it a cutout
         stuttgartGeoJSON.features[0].geometry.coordinates.unshift(worldShadow);
         return stuttgartGeoJSON;
-    }
-
-    // transforms long lat to lat long for leaflet
-    function reverseCoordinates(coordinates) {
-        let result = [];
-        for (let i = 0; i < coordinates.length; i++) {
-            if (Array.isArray(coordinates[i])) {
-                result[i] = reverseCoordinates(coordinates[i]);
-            } else {
-                result[i] = coordinates[i + 1];
-                result[i + 1] = coordinates[i];
-                return result;
-            }
-        }
-        return result;
     }
 
 
@@ -347,9 +352,9 @@
             // start slider with reverseStuttgart?
             let year = 2020;
             let month = 1;
-            let day = 10;
+            let day = 1;
             let hour = 3;
-            let minute = 20;
+            let minute = 50;
             let dustSensorsPromise = getDustSensorsByDate(year, month, day);
             drawVoronoi(dustSensorsPromise, hour, minute, stuttgartGeoJSON.features[0].geometry.coordinates[1], voronoiLayer, centerLayer);
         });
