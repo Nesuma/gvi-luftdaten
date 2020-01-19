@@ -204,14 +204,19 @@ function extractSensorId(id) {
 }
 
 function readFilesRecursively(dirName, files) {
-    let fileNames = fs.readdirSync(dirName);
+    let fileNames = [];
+    try {
+        fileNames = fs.readdirSync(dirName);
+    }catch (e) {
+        console.log("No directory " + dirName);
+    }
     files = files || {};
 
     for (let filename of fileNames) {
         if (fs.statSync(dirName + "/" + filename).isDirectory()) {
             files = getAllFiles(dirName + "/" + filename, files)
         } else {
-            files[filename] = readFileAsync(dirName + filename, 'utf-8'); // async read call returns promise
+            files[filename] = readFileAsync(dirName + filename, 'utf-8').catch(error => { console.log('caught', error.message); });; // async read call returns promise
         }
     }
     return files;
