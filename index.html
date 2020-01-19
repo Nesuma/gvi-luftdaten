@@ -5,8 +5,10 @@
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
     <title>Leaflet</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css"
-          integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
+    <link rel="stylesheet" type="text/css" href="//code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css"/>
+    <link rel="stylesheet" type="text/css" href="//cdn.leafletjs.com/leaflet-0.7/leaflet.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css"
+          integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
           crossorigin=""/>
     <style>
         html,
@@ -37,35 +39,115 @@
             opacity: 1;
         }
 
+
+        #time-ranges {
+            position: fixed;
+            top: 43px;
+            left: 50%;
+            margin-right: -50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            padding: 1em;
+            background: white;
+            font-family: Helvetica Neue, Arial, Helvetica, sans-serif;
+        }
+
+        #time-ranges input {
+            display: inline-block;
+            border: 1px solid #999;
+            font-size: 14px;
+            border-radius: 4px;
+            height: 28px;
+            line-height: 28px;
+        }
+
+        #time-ranges input[type='submit'] {
+            box-sizing: content-box;
+            padding: 0 1em;
+            text-transform: uppercase;
+            color: white;
+            background: #5C7DB8;
+            border-color: #5C7DB8;
+        }
+
+        #to select {
+            padding: 0 1em;
+        }
+
+        #to {
+            font-size: 14px;
+            height: 30px;
+            padding: 0 1em;
+            text-transform: uppercase;
+        }
+
         #map_canvas {
             width: 100%;
             height: 100%;
         }
     </style>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous">
+    </script>
+    <script src="http://code.jquery.com/ui/1.12.0/jquery-ui.js"
+            integrity="sha256-0YPKAwZP7Mp3ALMRVB2i8GXeEndvCq3eSl/WsAl1Ryk=" crossorigin="anonymous"></script>
+
 </head>
 
-<body onload="initialize()">
-<!--<canvas id="myCanvas" width="5000" height="3000" style="border:1px solid #d3d3d3;">
-    Your browser does not support the HTML5 canvas tag.</canvas>-->
-<div id="map_canvas"></div>
 
+<body onload="initialize()">
+<div id="map_canvas"></div>
+<div id="time-ranges" class="leaflet-bar">
+    <form action="#" id="form">
+        <label for="from">
+            From
+            <input id="from" type="date" value="2020-01-17" name="from" min="2018-07-07">
+        </label>
+        <label for="to">
+            <label>Period
+                <select id="to" name="top5">
+                    <option value="1">1 Day</option>
+                    <option value="2">2 Days</option>
+                    <option>3 Days</option>
+                    <option>4 Days</option>
+                    <option>5 Days</option>
+                </select>
+            </label>
+        </label>
+        <input type="submit" value="Update">
+    </form>
+</div>
 <script src="https://unpkg.com/d3-delaunay@5.1.6/dist/d3-delaunay.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.6.0/proj4-src.js"></script>
-<script src="dist/greiner-hormann.js"></script>
+<!--<script src="dist/greiner-hormann.js"></script>-->
 <script src="polybool.js"></script>
 <script src="martinez.umd.js"></script>
 <script src="helper.js"></script>
-<!--<script src="https://raw.githubusercontent.com/voidqk/polybooljs/master/dist/polybool.min.js"></script>-->
-<script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
-        integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
+<!--<script type='text/javascript' src="./proj4leaflet.js"></script>-->
+<script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
+        integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
         crossorigin=""></script>
-<script type='text/javascript' src="./proj4leaflet.js"></script>
 <script src="leaflet.rotatedMarker.js"></script>
 <!--<link rel="stylesheet" href="dist/wind-js-leaflet.css"/>-->
-<!--<link rel="stylesheet" href="/demo/demo.css"/>-->
+<link rel="stylesheet" href="demo/demo.css"/>
 <!--<script src="/dist/wind-js-leaflet.js"></script>-->
-
+<script src="SliderControl.js"></script>
 <script>
+    let timeForm = document.getElementById('form');
+    let dateInput = document.getElementById('from');
+    let periodInput = document.getElementById('to');
+    from.max = new Date().toISOString().split("T")[0];
+    timeForm.addEventListener('submit', function updateTimeRange(e) {
+        let date = new Date(dateInput.value);
+        let period = periodInput.value;
+        console.log(date);
+        console.log(period);
+        setupWindApi(layerControl, date)
+        getDustSensorsByDate(date.year, date.month, date.day);
+        e.preventDefault();
+    });
+
+
     const geocodeUrl = 'https://nominatim.openstreetmap.org/search?q=';
     const geocodeParams = '&format=json&limit=1';
     let map = null;
@@ -77,21 +159,8 @@
         popupAnchor: [0, -32]
     });
 
-    let windIcon2 = L.icon({
-        iconUrl: 'images/wind-direction.png',
-        iconSize: [100, 100], // size of the icon
-        iconAnchor: [0, 32],
-        popupAnchor: [0, -32]
-    });
-
-    function DataObject(id, lat, lon, dust) {
-        this.id = id;
-        this.lat = lat;
-        this.lon = lon;
-        this.dust = dust;
-    }
-
     let dustsensors;
+    let layerControl;
 
     async function getDustSensorsByDate(year, month, day) {
         // http://localhost:3000/dust/all/2018-7-7
@@ -151,7 +220,7 @@
         let cells = voronoi.cellPolygons();
         let i = 0;
         for (let cell of cells) {
-            wantedSensors[i].cell = intersection(cell,stuttgartCutoutPolygon);
+            wantedSensors[i].cell = intersection(cell, stuttgartCutoutPolygon);
             i++;
         }
     }
@@ -220,7 +289,6 @@
         }).addTo(stuttgart);
     }
 
-
     function initialize() {
         var Esri_WorldImagery = L.tileLayer(
             "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -228,7 +296,7 @@
                 attribution:
                     "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, " +
                     "AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
-                // minZoom: 12
+                minZoom: 12
             }
         );
 
@@ -246,7 +314,7 @@
 
         dustsensors = L.layerGroup().addTo(map);
         let voronoiLayer = L.layerGroup().addTo(map);
-        let centerLayer = L.layerGroup().addTo(map);
+        let centerLayer = L.layerGroup();
         let stuttgartLayer = L.layerGroup().addTo(map);
 
         getStuttgartPolygons().then((stuttgartGeoJSON) => {
@@ -268,44 +336,114 @@
             "Centers": centerLayer,
         };
         let layerControl = L.control.layers(background, foreground, {collapsed: false}).addTo(map);
-        let dao = new DataObject(20144, 50.814, 6.590, 0.82);
-        /*
-                    $.getJSON('http://localhost:3000/wind/4928/2020-1-8-16-20', function (data) {
-                        console.log(data);
 
-                    })
+        let timestamp = new Time(8, 20);
+        console.log(timestamp);
 
-                    L.marker([48.73, 9.2], {
-                        rotationAngle: 45,
-                        icon: windIcon
-                    }).addTo(map);
-        */
-        // loadapi();
+        //pastData(layerControl, timestamp);
+        // currentData(layerControl)
         // setInterval(function () {
-        //     loadapi()
-        // }, 300000);
+        //     currentData(layerControl)
+        // }, 300000)
+        setupWindApi(layerControl, null)
+    }
 
+    function Time(hour, minute, second) {
+        this.hour = hour;
+        this.minute = minute;
+    }
+
+    function addSlider(sensors) {
+        console.log(dustsensors);
+        var marker1 = L.marker([51.5, -0.09], {time: "2013-01-22 08:42:26+01"});
+        var marker2 = L.marker([51.6, -0.09], {time: "2013-01-22 10:00:26+01"});
+        var marker3 = L.marker([51.7, -0.09], {time: "2013-01-22 10:03:29+01"});
+        layer = L.layerGroup([dustsensors, marker1, marker2])
+        //initiate slider, follow = 1 means, show one feature at a time
+        sliderControl = L.control.sliderControl({position: "topright", layer: layer, follow: true});
+        map.addControl(sliderControl);//add slider to map
+        sliderControl.startSlider();
+    }
+
+    async function getDustSensorsByDate(year, month, day) {
+        // $.getJSON('http://localhost:3000/dust/all/2018-7-7', function (data) {
+        return $.getJSON('http://localhost:3000/dust/all/' + year + "-" + month + "-" + day, function (data) {
+            console.log("received json");
+            return data;
+        })
+    }
+
+    function setupWindApi(layerControl, date) {
         var handleError = function (err) {
             console.log('handleError...');
             console.log(err);
         };
 
-        WindJSLeaflet.init({
-            localMode: true,
-            map: map,
-            layerControl: layerControl,
-            useNearest: false,
-            timeISO: null,
-            nearestDaysLimit: 7,
-            displayValues: true,
-            displayOptions: {
-                displayPosition: 'bottomleft',
-                displayEmptyString: 'No wind data'
-            },
-            overlayName: 'wind',
-            errorCallback: handleError
-        });
+        // WindJSLeaflet.init({
+        //     localMode: false,
+        //     map: map,
+        //     layerControl: layerControl,
+        //     useNearest: true, //nearest to Time
+        //     timeISO: date, //=currentTime
+        //     nearestDaysLimit: 3,
+        //     displayValues: true,
+        //     displayOptions: {
+        //         displayPosition: 'bottomleft',
+        //         displayEmptyString: 'No wind data'
+        //     },
+        //     overlayName: 'Wind',
+        //     pingUrl: 'http://localhost:7000/alive',        // url to check service availability
+        //     latestUrl: 'http://localhost:7000/latest',     // url to get latest data with no required params
+        //     nearestUrl: 'http://localhost:7000/nearest',
+        //     errorCallback: handleError
+        // });
+    }
 
+
+    function currentData(layerControl) {
+        $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
+            console.log(data);
+            let timestamp = data[0].timestamp;
+            dustsensors = L.layerGroup({timestamp});
+            layerControl.addOverlay(dustsensors, "Feinstaub")
+            data.forEach(element => {
+                let marker = L.marker([element.location.latitude, element.location.longitude], {time: timestamp}).addTo(dustsensors);
+                if (marker !== undefined) {
+                    marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + timestamp);
+                }
+                // dustsensors.add({time: "2013-01-22 12:03:29+01"})
+            });
+            setupWindApi(layerControl, timestamp);
+            // let geojson_now = L.geoJson(array, { time: timestamp });
+            // addSlider();
+        })
+    }
+
+    function pastData(layerControl, time) {
+        $.getJSON('http://localhost:3000/dust/all/2020-1-8', function (data) {
+            console.log(data);
+            let hour = time.hour;
+            let minute = time.minute;
+            dustsensors = L.layerGroup();
+            layerControl.addOverlay(dustsensors, "Feinstaub")
+            let number = 140;
+            console.log(data[number][hour][minute]);
+            console.log(data.length);
+            console.log(Object.entries(data));
+            for (let obj of Object.entries(data)) {
+                if (obj[1][hour] != undefined && obj[1][hour][minute] != undefined) {
+                    let element = obj[1][hour][minute];
+                    console.log(element);
+                    let marker = L.marker([element.lat, element.lon], {time: (time.hour + time.minute)}).addTo(dustsensors);
+                    if (marker !== undefined) {
+                        marker.bindPopup("Sensor p1: " + element.p1 + " p2: " + element.p2 + "<br/> Time: " + time.hour + ":" + time.minute);
+                    }
+                }
+            }
+
+            //setupWindApi(layerControl, timestamp);
+            // let geojson_now = L.geoJson(array, { time: timestamp });
+        })
     }
 
     function loadapi() {
@@ -325,9 +463,6 @@
 
 </script>
 <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
-<script src="https://code.jquery.com/jquery-3.3.1.min.js"
-        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous">
-</script>
 </body>
 
 </html>
