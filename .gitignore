@@ -3,10 +3,10 @@
 *.zip
 *.sh
 sandbox*
-*data
+*dust
+*wind
 *data.csv
 *.DS_Store
-data/*
 test.html
 
 #Mac

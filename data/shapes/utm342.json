@@ -1,0 +1,56 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              9.0,
+              48.8
+            ],
+            [
+              9.1,
+              48.8
+            ],
+            [
+              9.0,
+              48.9
+            ],
+            [
+              9.1,
+              48.9
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "ADE": 4,
+        "GF": 4,
+        "BSG": 1,
+        "RS": "08111",
+        "AGS": "08111",
+        "SDV_RS": "081110000000",
+        "GEN": "Stuttgart",
+        "BEZ": "Stadtkreis",
+        "IBZ": 41,
+        "BEM": "--",
+        "NBD": "ja",
+        "SN_L": "08",
+        "SN_R": "1",
+        "SN_K": "11",
+        "SN_V1": "00",
+        "SN_V2": "00",
+        "SN_G": "000",
+        "FK_S3": "R",
+        "NUTS": "DE111",
+        "RS_0": "081110000000",
+        "AGS_0": "08111000",
+        "WSK": "1973-01-01T00:00:00.000Z",
+        "DEBKG_ID": "DEBKGDL20000DZKR"
+      }
+    }
+  ]
+}
