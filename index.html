@@ -457,31 +457,35 @@
                 $('.slider-time').html(formattedTime);
 
                 if (Math.abs(ui.values[0] - tempval) > 21600) {
-                    setupWindApi(new Date(formattedTime))
+                    setupWindApi(new Date(formattedTime));
                     tempval = ui.values[0];
                 }
-                let dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
-                let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
-                layersPromise.then(layers => {
-                    console.log("doing");
-                    let voronoi = "Voronoi";
-                    let center = "Sensoren";
-                    if (map.hasLayer(foreground[voronoi])) {
-                        map.removeLayer(foreground[voronoi]);
-                        layerControl.removeLayer(foreground[voronoi]);
-                    }
-                    if (map.hasLayer(foreground[center])) {
-                        map.removeLayer(foreground[center]);
-                        layerControl.removeLayer(foreground[center]);
-                    }
-                    foreground[voronoi] = layers[voronoi];
-                    layerControl.addOverlay(foreground[voronoi], voronoi);
-                    map.addLayer(foreground[voronoi]);
-                    foreground[center] = layers[center];
-                    layerControl.addOverlay(foreground[center], center);
-                    map.addLayer(foreground[center]);
-                });
+                renderVoronoi(currentTime,stuttgartGeoJSON);
             }
+        });
+    }
+
+    function renderVoronoi(currentTime,stuttgartGeoJSON){
+        let dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
+        let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
+        layersPromise.then(layers => {
+            console.log("doing");
+            let voronoi = "Voronoi";
+            let center = "Sensoren";
+            if (map.hasLayer(foreground[voronoi])) {
+                map.removeLayer(foreground[voronoi]);
+                layerControl.removeLayer(foreground[voronoi]);
+            }
+            if (map.hasLayer(foreground[center])) {
+                map.removeLayer(foreground[center]);
+                layerControl.removeLayer(foreground[center]);
+            }
+            foreground[voronoi] = layers[voronoi];
+            layerControl.addOverlay(foreground[voronoi], voronoi);
+            map.addLayer(foreground[voronoi]);
+            foreground[center] = layers[center];
+            layerControl.addOverlay(foreground[center], center);
+            map.addLayer(foreground[center]);
         });
     }
 
