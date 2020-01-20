@@ -196,14 +196,6 @@
                 popupAnchor: [0, -32 * factor]
             });
         }
-
-        function DataObject(id, lat, lon, dust) {
-            this.id = id
-            this.lat = lat
-            this.lon = lon
-            this.dust = dust
-        }
-
         // TODO REMOVE
         let dustsensors;
         let layerControl;
@@ -376,14 +368,13 @@
             );
             let osm = new L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-                minZoom: 12,
-                maxZoom: 2,
+                minZoom: 11,
                 renderer: L.svg(),
             });
             timeForm.dispatchEvent(new Event("submit"));
 
             let center = L.latLng(48.8, 9.2);
-            let zoom = 11;
+            let zoom = 12;
             map = L.map('map_canvas').setView(center, zoom);
 
             console.log(osm);
@@ -402,14 +393,10 @@
                     let timeForm = document.getElementById('form');
                     let dateInput = document.getElementById('from');
                     let periodInput = document.getElementById('to');
-                    console.log(dateInput.value);
 
                     let date = new Date(dateInput.value);
-                    console.log(date);
                     let period = periodInput.value;
-                    console.log(period);
-                    // WindJSLeaflet._clearWind();
-                    let v;
+
                     if (from.value == to.max) {
                         console.log("current data");
                         $("#slider-range").slider("destroy");
