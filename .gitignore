@@ -4,7 +4,6 @@
 *.sh
 sandbox*
 *dust
-*wind
 *data.csv
 *.DS_Store
 test.html
