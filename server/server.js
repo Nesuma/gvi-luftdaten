@@ -329,7 +329,7 @@ async function getWindSensors() {
 
     // async: reading the files from disk
     const stationPromises = readFilesRecursively('../data/wind/stations/');
-    // await downloadWindData(stationPromises);
+    await downloadWindData(stationPromises);
     const measurementPromises = readFilesRecursively("../data/wind/measurements/");
 
     let sensorDataPromises = {};
