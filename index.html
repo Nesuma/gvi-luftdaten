@@ -187,12 +187,15 @@
         popupAnchor: [0, -32]
     });
 
-    let windIcon2 = L.icon({
-        iconUrl: 'images/windsockMOCpole.png',
-        iconSize: [20, 50], // size of the icon
-        iconAnchor: [10, 50],
-        popupAnchor: [0, -32]
-    });
+    function getWindIcon(speed){
+        let factor = 1.0 + (speed/10);
+        return windIcon2 = L.icon({
+            iconUrl: 'images/windsockMOCpole.png',
+            iconSize: [20*factor, 40*factor], // size of the icon
+            iconAnchor: [10*factor, 40*factor],
+            popupAnchor: [0, -32*factor]
+        });
+    }
 
     function DataObject(id, lat, lon, dust) {
         this.id = id
@@ -205,6 +208,7 @@
     let dustsensors;
     let layerControl;
     let foreground;
+    let velocityLayer;
 
     function getPoints(sensors) {
         // this returns the coordinates in a linear array
@@ -496,7 +500,7 @@
         });
     }
 
-    let velocityLayer;
+
 
     function setupWindApi(date) {
         $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=1", function (data) {
@@ -531,31 +535,37 @@
                     map.removeLayer(foreground["Wind"]);
                     layerControl.removeLayer(foreground["Wind"]);
                 }
-                let query = 'http://localhost:3000/wind/4931/'
-                    + date.getFullYear() + "-"
-                    + (date.getMonth() + 1) + "-"
-                    + date.getDate() + "-"
-                    + date.getHours() + "-"
-                    + date.getMinutes();
-                console.log("query");
-                console.log(query);
-                $.getJSON(query, function (data) {
-                    console.log("received wind json from localhost");
-                    console.log(data);
-                    let windLayer = L.layerGroup();
-                    let marker = L.marker([data.lat, data.lon], {
-                        icon: windIcon2,
-                        rotationAngle: data.direction
-                    });
-                    let direction = (data.direction > 180) ? data.direction - 180 : data.direction + 180;
-                    marker.bindPopup("Wind speed: " + data.speed + " direction: " + direction);
-                    marker.addTo(windLayer);
+                let windLayer = L.layerGroup();
 
-                    foreground["Wind"] = windLayer;
-                    layerControl.addOverlay(foreground["Wind"], "Wind");
-                    map.addLayer(foreground["Wind"]);
-                });
+                setMarker(date,4928,windLayer);
+                setMarker(date,4931,windLayer);
+
+                foreground["Wind"] = windLayer;
+                layerControl.addOverlay(foreground["Wind"], "Wind");
+                map.addLayer(foreground["Wind"]);
             });
+    }
+
+    function setMarker(date, sensorId,windLayer) {
+        let query = 'http://localhost:3000/wind/' + sensorId + '/'
+            + date.getFullYear() + "-"
+            + (date.getMonth() + 1) + "-"
+            + date.getDate() + "-"
+            + date.getHours() + "-"
+            + date.getMinutes();
+        console.log("query");
+        console.log(query);
+        $.getJSON(query, function (data) {
+            console.log("received wind json from localhost");
+            console.log(data);
+            let marker = L.marker([data.lat, data.lon], {
+                icon: getWindIcon(data.speed),
+                rotationAngle: data.direction
+            });
+            let direction = (data.direction > 180) ? data.direction - 180 : data.direction + 180;
+            marker.bindPopup("Wind speed: " + data.speed + " direction: " + direction);
+            marker.addTo(windLayer);
+        });
     }
 
     async function currentData(currentTime, stuttgartGeoJSON) {
