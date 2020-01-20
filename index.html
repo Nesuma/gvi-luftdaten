@@ -191,18 +191,21 @@
         let map = null;
 
         let windIcon = L.icon({
-            iconUrl: 'images/wind.png',
-            iconSize: [100, 100], // size of the icon
-            iconAnchor: [0, 32],
+            iconUrl: 'images/windsockMOC.png',
+            iconSize: [20, 40], // size of the icon
+            iconAnchor: [10, 20],
             popupAnchor: [0, -32]
         });
 
-        let windIcon2 = L.icon({
-            iconUrl: 'images/wind-direction.png',
-            iconSize: [100, 100], // size of the icon
-            iconAnchor: [0, 32],
-            popupAnchor: [0, -32]
-        });
+        function getWindIcon(speed) {
+            let factor = 1.0 + (speed / 10);
+            return windIcon2 = L.icon({
+                iconUrl: 'images/windsockMOCpole.png',
+                iconSize: [20 * factor, 40 * factor], // size of the icon
+                iconAnchor: [10 * factor, 40 * factor],
+                popupAnchor: [0, -32 * factor]
+            });
+        }
 
         function DataObject(id, lat, lon, dust) {
             this.id = id
@@ -215,6 +218,7 @@
         let dustsensors;
         let layerControl;
         let foreground;
+        let velocityLayer;
 
         function getPoints(sensors) {
             // this returns the coordinates in a linear array
@@ -257,8 +261,7 @@
                     necessarySensors.push(entry);
                 } catch (e) {
                     // console.log(e);
-
-                    console.log("no value for id: " + key + " hour: " + hour + " minute: " + minute);
+                    // console.log("no value for id: " + key + " hour: " + hour + " minute: " + minute);
                 }
             }
             addCells(necessarySensors, bounds, reverseStuttgartPolygon);
@@ -301,7 +304,7 @@
                         weight: 2,
                         fillOpacity: 0.6
                     });
-                    polygon.bindPopup("Polygon #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust + "<br> day: " + day + " hour:" + hour + " minute: " + minute);
+                    polygon.bindPopup("Polygon #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
                     polygon.addTo(voronoiLayer);
                 } else {
                     console.log("No polygon for sensor, possibly out of area");
@@ -318,7 +321,6 @@
             // centerLayer.addTo(map);
             return { Sensoren: centerLayer, Voronoi: voronoiLayer };
         }
-
         async function getStuttgartPolygons() {
             let converter = getCoordConverter();
             let stuttgartGeoJSON = await $.getJSON('http://localhost:3000/landkreis');
@@ -417,11 +419,10 @@
                     let period = periodInput.value;
                     console.log(period);
                     // WindJSLeaflet._clearWind();
-                    let v; 
+                    let v;
                     if (from.value == to.max) {
                         console.log("current data");
                         currentData(new Date(), stuttgartGeoJSON);
-                        $("#slider-range").slider("destroy");
                         display_time();
                         v = setInterval(function () {
                             currentData(new Date(), stuttgartGeoJSON);
@@ -436,6 +437,7 @@
                     e.preventDefault();
                 });
                 timeForm.dispatchEvent(new Event("submit"));
+
 
                 // start slider here
                 // let year = 2020;
@@ -502,21 +504,15 @@
 
         function renderVoronoi(currentTime, stuttgartGeoJSON, data) {
             let dustSensorPromise;
-            if (data === undefined) {
-                console.log("defined");
-
+            if (data == undefined) {
                 dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
             } else {
                 console.log("current data");
                 currentTime.setHours(0, 0, 0, 0);
-                console.log(data);
-
                 dustSensorPromise = data;
-
             }
-            console.log(dustSensorPromise);
 
-            let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getDate(), currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
+            let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
             layersPromise.then(layers => {
                 console.log("doing");
                 let voronoi = "Voronoi";
@@ -538,7 +534,10 @@
             });
         }
 
-        let velocityLayer;
+
+
+
+
 
         function setupWindApi(date) {
             $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=1", function (data) {
@@ -567,18 +566,47 @@
                 map.addLayer(foreground["Wind"]);
             })
                 .fail(function () {
-                    console.log("error: no wind data");
+                    console.log("error: no dynamic wind data");
                     if (map.hasLayer(foreground["Wind"])) {
                         console.log("removing wind");
                         map.removeLayer(foreground["Wind"]);
                         layerControl.removeLayer(foreground["Wind"]);
-                        return;
                     }
+                    let windLayer = L.layerGroup();
+
+                    setMarker(date, 4928, windLayer);
+                    setMarker(date, 4931, windLayer);
+
+                    foreground["Wind"] = windLayer;
+                    layerControl.addOverlay(foreground["Wind"], "Wind");
+                    map.addLayer(foreground["Wind"]);
                 });
         }
 
+        function setMarker(date, sensorId, windLayer) {
+            let query = 'http://localhost:3000/wind/' + sensorId + '/'
+                + date.getFullYear() + "-"
+                + (date.getMonth() + 1) + "-"
+                + date.getDate() + "-"
+                + date.getHours() + "-"
+                + date.getMinutes();
+            console.log("query");
+            console.log(query);
+            $.getJSON(query, function (data) {
+                console.log("received wind json from localhost");
+                console.log(data);
+                let marker = L.marker([data.lat, data.lon], {
+                    icon: getWindIcon(data.speed),
+                    rotationAngle: data.direction
+                });
+                let direction = (data.direction > 180) ? data.direction - 180 : data.direction + 180;
+                marker.bindPopup("Wind speed: " + data.speed + " direction: " + direction);
+                marker.addTo(windLayer);
+            });
+        }
+
         async function currentData(currentTime, stuttgartGeoJSON) {
-            $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.774,9.174,10', function (data) {
+            await $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.774,9.174,10', function (data) {
                 let json = {};
                 data.forEach(element => {
                     let id = element.sensor.id;
@@ -592,18 +620,11 @@
                             json[id]["0"]["0"]["p2"] = value.value;
                         }
                     });
-                    if (json[id]["0"]["0"]["p1"] == undefined && json[id]["0"]["0"]["p2"] == undefined) { //beide?
-                        delete json[id];
-                        return;
-                    }
-                    json[id]["0"]["0"]["lon"] = element.location.longitude;
-                    json[id]["0"]["0"]["lat"] = element.location.latitude;
-                });
-                setupWindApi(currentTime);
-                renderVoronoi(currentTime, stuttgartGeoJSON, json)
-            })
+                    setupWindApi(currentTime);
+                    renderVoronoi(currentTime, stuttgartGeoJSON, json)
+                })
+            });
         }
-
 
     </script>
     <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
