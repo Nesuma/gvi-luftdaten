@@ -283,7 +283,7 @@
         }
 
 
-        async function drawVoronoi(dustSensorPromise, day, hour, minute, reverseStuttgartPolygon, p2) {
+        async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, p2) {
             console.log(dustSensorPromise);
 
             let centerLayer = L.layerGroup();
@@ -503,13 +503,14 @@
         }
 
         function renderVoronoi(currentTime, stuttgartGeoJSON, data) {
-            let dustSensorPromise;
-            if (data == undefined) {
+            let dustSensorsPromise;
+            if (data === undefined) {
+                console.log("getting old dust data for " + currentTime)
                 dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
             } else {
-                console.log("current data");
+                console.log("current dust data");
                 currentTime.setHours(0, 0, 0, 0);
-                dustSensorPromise = data;
+                dustSensorsPromise = data;
             }
 
             let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
@@ -531,13 +532,9 @@
                 foreground[center] = layers[center];
                 layerControl.addOverlay(foreground[center], center);
                 map.addLayer(foreground[center]);
+                console.log("doing done");
             });
         }
-
-
-
-
-
 
         function setupWindApi(date) {
             $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=1", function (data) {
