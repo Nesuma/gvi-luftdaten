@@ -578,7 +578,7 @@
                     rotationAngle: data.direction
                 });
                 let direction = (data.direction > 180) ? data.direction - 180 : data.direction + 180;
-                marker.bindPopup("Wind speed: " + data.speed + " m/s direction: " + direction + " degree");
+                marker.bindPopup("<strong>Sensor station</strong><br/>Wind speed: " + data.speed + " m/s<br/> Direction: " + direction + " degree");
 
                 marker.addTo(windLayer);
             });
