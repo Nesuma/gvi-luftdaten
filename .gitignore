@@ -16,7 +16,7 @@ test.html
 .idea
 
 # node
-package.json
+# package.json
 package-lock.json
 
 # Logs
