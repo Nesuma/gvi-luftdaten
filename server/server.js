@@ -218,12 +218,14 @@ function readFilesRecursively(dirName, files) {
 
     for (let filename of fileNames) {
         if (fs.statSync(dirName + "/" + filename).isDirectory()) {
-            files = getAllFiles(dirName + "/" + filename, files)
+            files = readFilesRecursively(dirName + "/" + filename, files)
         } else {
-            files[filename] = readFileAsync(dirName + filename, 'utf-8').catch(error => {
-                console.log('caught', error.message);
-            });
-            ; // async read call returns promise
+            if(filename !== ".gitkeep"){
+                files[filename] = readFileAsync(dirName + filename, 'utf-8').catch(error => {
+                    console.log('caught', error.message);
+                });
+                ; // async read call returns promise
+            }
         }
     }
     return files;
@@ -251,6 +253,8 @@ async function getLinesFromFile(dataPromise) {
 
 function getCoordinates(metadata) {
     // get array of metadata about geography of one sensor. Only need coordinates, every row has the same (sensors at the same place)
+    console.log("metadata");
+    console.log(metadata);
     let values = metadata[0].split(";");
     let lat = values[2].trim();
     let lon = values[3].trim();
@@ -314,6 +318,7 @@ async function downloadWindData(stationPromises) {
     }
     for (let i = 0; i < promises.length; i++) {
         await promises[i];
+        console.log("awaited promise " + i);
     }
     console.log("Finished writing all files");
 
@@ -324,7 +329,7 @@ async function getWindSensors() {
 
     // async: reading the files from disk
     const stationPromises = readFilesRecursively('../data/wind/stations/');
-    await downloadWindData(stationPromises);
+    // await downloadWindData(stationPromises);
     const measurementPromises = readFilesRecursively("../data/wind/measurements/");
 
     let sensorDataPromises = {};
@@ -339,10 +344,17 @@ async function getWindSensors() {
         sensorCoordinatePromises[numId] = getLinesFromFile(dataPromise);
     }
 
+    console.log("sensorCoordinatePromises");
+    console.log(sensorCoordinatePromises);
+
     // creating Sensor objects with the arrays of data lines
     for (const [filename, sensorPromise] of Object.entries(sensorDataPromises)) {
+        console.log("filename");
+        console.log(filename);
         let numId = extractSensorId(filename);
         if (sensors[numId] === undefined) {
+            console.log("numId");
+            console.log(numId);
             let coordinates = getCoordinates(await sensorCoordinatePromises[numId]);
             sensors[numId] = new WindSensor();
             sensors[numId].setCoordinates(coordinates.lon, coordinates.lat);
