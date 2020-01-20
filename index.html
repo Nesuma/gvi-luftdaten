@@ -2,19 +2,19 @@
 <html>
 
 <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
     <title>Leaflet</title>
-    <link rel="stylesheet" type="text/css" href="//code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css"/>
-    <link rel="stylesheet" type="text/css" href="//cdn.leafletjs.com/leaflet-0.7/leaflet.css"/>
+    <link rel="stylesheet" type="text/css" href="//code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css" />
+    <link rel="stylesheet" type="text/css" href="//cdn.leafletjs.com/leaflet-0.7/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css"
-          integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
-          crossorigin=""/>
+        integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+        crossorigin="" />
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"
-            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous">
-    </script>
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous">
+        </script>
     <script src="http://code.jquery.com/ui/1.12.0/jquery-ui.js"
-            integrity="sha256-0YPKAwZP7Mp3ALMRVB2i8GXeEndvCq3eSl/WsAl1Ryk=" crossorigin="anonymous"></script>
+        integrity="sha256-0YPKAwZP7Mp3ALMRVB2i8GXeEndvCq3eSl/WsAl1Ryk=" crossorigin="anonymous"></script>
     <style>
         html,
         body {
@@ -118,450 +118,449 @@
 
 
 <body onload="initialize()">
-<div id="map_canvas"></div>
-<div id="time-range" class="leaflet-bar">
-    <p><b>Current time:</b> <span class="slider-time"></span>
-    </p>
-    <div>
-        <!--also with class="sliders_step1-->
-        <div id="slider-range">
-            <!----works like this:</div>class="ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all">!-->
-            <!----span class="ui-slider-handle ui-state-default ui-corner-all">!-->
+    <div id="map_canvas"></div>
+    <div id="time-range" class="leaflet-bar">
+        <p><b>Current time:</b> <span class="slider-time"></span>
+        </p>
+        <div>
+            <!--also with class="sliders_step1-->
+            <div id="slider-range">
+                <!----works like this:</div>class="ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all">!-->
+                <!----span class="ui-slider-handle ui-state-default ui-corner-all">!-->
+            </div>
         </div>
     </div>
-</div>
-<div id="time-ranges" class="leaflet-bar">
-    <form action="#" id="form">
-        <label for="from">
-            From
-            <input id="from" type="date" value="2020-01-17" name="from" min="2018-07-07">
-        </label>
-        <label for="to">
-            To
-            <input id="to" type="date" value="2020-01-17" name="to" min="2018-07-07">
-        </label>
-        <input type="submit" value="Update">
-    </form>
-</div>
-<script src="https://unpkg.com/d3-delaunay@5.1.6/dist/d3-delaunay.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.6.0/proj4-src.js"></script>
-<!--<script src="dist/greiner-hormann.js"></script>-->
-<script src="polybool.js"></script>
-<script src="martinez.umd.js"></script>
-<script src="helper.js"></script>
-<!--<script type='text/javascript' src="./proj4leaflet.js"></script>-->
-<script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
+    <div id="time-ranges" class="leaflet-bar">
+        <form action="#" id="form">
+            <label for="from">
+                From
+                <input id="from" type="date" value="2020-01-17" name="from" min="2018-07-07">
+            </label>
+            <label for="to">
+                To
+                <input id="to" type="date" value="2020-01-17" name="to" min="2018-07-07">
+            </label>
+            <input type="submit" value="Update">
+        </form>
+    </div>
+    <script src="https://unpkg.com/d3-delaunay@5.1.6/dist/d3-delaunay.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.6.0/proj4-src.js"></script>
+    <!--<script src="dist/greiner-hormann.js"></script>-->
+    <script src="polybool.js"></script>
+    <script src="martinez.umd.js"></script>
+    <script src="helper.js"></script>
+    <!--<script type='text/javascript' src="./proj4leaflet.js"></script>-->
+    <script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
         integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
         crossorigin=""></script>
-<script src="leaflet.rotatedMarker.js"></script>
-<link rel="stylesheet" href="dist/wind-js-leaflet.css"/>
-<link rel="stylesheet" href="demo/demo.css"/>
-<script src="/dist/wind-js-leaflet.js"></script>
-<!--leaflet-velocity-->
-<link rel="stylesheet" href="dist/leaflet-velocity.css"/>
-<script src="dist/leaflet-velocity.js"></script>
-<link rel="stylesheet" type="text/css" href="//code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css"/>
-<script>
-    let timeForm = document.getElementById('form');
-    let dateInput = document.getElementById('from');
-    let periodInput = document.getElementById('to');
-    from.max = new Date().toISOString().split("T")[0];
-    to.max = new Date().toISOString().split("T")[0];
-    to.value = from.max;
-    to.min = from.value;
-    $('#from').change(function () {
-        let periodInput = document.getElementById('to');
+    <script src="leaflet.rotatedMarker.js"></script>
+    <link rel="stylesheet" href="dist/wind-js-leaflet.css" />
+    <link rel="stylesheet" href="demo/demo.css" />
+    <script src="/dist/wind-js-leaflet.js"></script>
+    <!--leaflet-velocity-->
+    <link rel="stylesheet" href="dist/leaflet-velocity.css" />
+    <script src="dist/leaflet-velocity.js"></script>
+    <link rel="stylesheet" type="text/css" href="//code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css" />
+    <script>
+        let timeForm = document.getElementById('form');
         let dateInput = document.getElementById('from');
+        let periodInput = document.getElementById('to');
+        from.max = new Date().toISOString().split("T")[0];
+        to.max = new Date().toISOString().split("T")[0];
+        to.value = from.max;
         to.min = from.value;
-    });
-
-
-    const geocodeUrl = 'https://nominatim.openstreetmap.org/search?q=';
-    const geocodeParams = '&format=json&limit=1';
-    let map = null;
-
-    let windIcon = L.icon({
-        iconUrl: 'images/wind.png',
-        iconSize: [100, 100], // size of the icon
-        iconAnchor: [0, 32],
-        popupAnchor: [0, -32]
-    });
-
-    let windIcon2 = L.icon({
-        iconUrl: 'images/wind-direction.png',
-        iconSize: [100, 100], // size of the icon
-        iconAnchor: [0, 32],
-        popupAnchor: [0, -32]
-    });
-
-    function DataObject(id, lat, lon, dust) {
-        this.id = id
-        this.lat = lat
-        this.lon = lon
-        this.dust = dust
-    }
-
-    // TODO REMOVE
-    let dustsensors;
-    let layerControl;
-    let foreground;
-
-    function getPoints(sensors) {
-        // this returns the coordinates in a linear array
-        let points = [];
-        for (let i = 0; i < sensors.length; i++) {
-            points.push(sensors[i].lon);
-            points.push(sensors[i].lat);
-        }
-        return points
-    }
-
-    async function getDustSensorsByDate(year, month, day) {
-        // http://localhost:3000/dust/all/2018-7-7
-        // will need a converter from live data to regular data
-        return $.getJSON('http://localhost:3000/dust/all/' + year + "-" + month + "-" + day, function (data) {
-            console.log("received json");
-            // return data;
+        $('#from').change(function () {
+            let periodInput = document.getElementById('to');
+            let dateInput = document.getElementById('from');
+            to.min = from.value;
         });
-    }
 
-    function filterWantedSensors(dustSensors, hour, minute, bounds, reverseStuttgartPolygon, p2) {
-        // dust sensors are all sensors with all measurements from 1 day
-        // this returns an array of sensors with values for the requested time only
-        let necessarySensors = [];
-        for (let key in dustSensors) {
-            try {
-                let entry = {};
-                let sensor = dustSensors[key][hour][minute];
-                entry.lon = parseFloat(sensor.lon);
-                entry.lat = parseFloat(sensor.lat);
 
-                // e.g. 10.1.2020 ids: 3651=2730 are duplicates
-                if ((isDuplicate(necessarySensors, entry)) ||
-                    (isOutsidePolygon(entry, reverseStuttgartPolygon))) {
-                    continue;
-                }
+        const geocodeUrl = 'https://nominatim.openstreetmap.org/search?q=';
+        const geocodeParams = '&format=json&limit=1';
+        let map = null;
 
-                entry.dust = (p2) ? sensor.p2 : sensor.p1;
-                entry.id = key;
-                necessarySensors.push(entry);
-            } catch (e) {
-                // console.log(e);
-                console.log("no value for id: " + key + " hour: " + hour + " minute: " + minute);
-            }
+        let windIcon = L.icon({
+            iconUrl: 'images/wind.png',
+            iconSize: [100, 100], // size of the icon
+            iconAnchor: [0, 32],
+            popupAnchor: [0, -32]
+        });
+
+        let windIcon2 = L.icon({
+            iconUrl: 'images/wind-direction.png',
+            iconSize: [100, 100], // size of the icon
+            iconAnchor: [0, 32],
+            popupAnchor: [0, -32]
+        });
+
+        function DataObject(id, lat, lon, dust) {
+            this.id = id
+            this.lat = lat
+            this.lon = lon
+            this.dust = dust
         }
-        addCells(necessarySensors, bounds, reverseStuttgartPolygon);
-        return necessarySensors;
-    }
 
-    function addCells(wantedSensors, bounds, stuttgartCutoutPolygon) {
-        // this calculates the cell surrounding the center by intersection with the Stuttgart polygon
-        let delaunay = new d3.Delaunay(getPoints(wantedSensors));
+        // TODO REMOVE
+        let dustsensors;
+        let layerControl;
+        let foreground;
 
-        let voronoi = delaunay.voronoi(bounds);
-
-        let cells = voronoi.cellPolygons();
-        let i = 0;
-        for (let cell of cells) {
-            wantedSensors[i].cell = intersection(cell, stuttgartCutoutPolygon);
-            i++;
-        }
-    }
-
-
-    async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, p2) {
-        let centerLayer = L.layerGroup();
-        let voronoiLayer = L.layerGroup();
-        let dustSensors = await dustSensorPromise;
-
-        let bounds = [9.036, 48.68972, 9.3164, 48.8697];
-
-        let wantedSensors = filterWantedSensors(dustSensors, hour, minute, bounds, reverseStuttgartPolygon, p2);
-
-        for (let i = 0; i < wantedSensors.length; i++) {
-            let sensor = wantedSensors[i];
-            let cell = sensor.cell;
-            if ((cell !== undefined) && (cell !== null)) {
-                let polygon = L.polygon(cell, {
-                    fillColor: getColor(sensor.dust),
-                    color: "#222222",
-                    weight: 2,
-                    fillOpacity: 0.6
-                });
-                polygon.bindPopup("Polygon #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
-                polygon.addTo(voronoiLayer);
-            } else {
-                console.log("No polygon for sensor, possibly out of area");
-                console.log(sensor)
+        function getPoints(sensors) {
+            // this returns the coordinates in a linear array
+            let points = [];
+            for (let i = 0; i < sensors.length; i++) {
+                points.push(sensors[i].lon);
+                points.push(sensors[i].lat);
             }
-            let center = L.rectangle([[sensor.lat, sensor.lon], [sensor.lat, sensor.lon]], {
-                color: "#222222",
-                weight: 3
+            return points
+        }
+
+        async function getDustSensorsByDate(year, month, day) {
+            // http://localhost:3000/dust/all/2018-7-7
+            // will need a converter from live data to regular data
+            return $.getJSON('http://localhost:3000/dust/all/' + year + "-" + month + "-" + day, function (data) {
+                console.log("received json");
+                // return data;
             });
-            center.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
-            center.addTo(centerLayer);
-        }
-        // voronoiLayer.addTo(map);
-        // centerLayer.addTo(map);
-        return {Sensoren: centerLayer, Voronoi: voronoiLayer};
-    }
-
-    async function getStuttgartPolygons() {
-        let converter = getCoordConverter();
-        let stuttgartGeoJSON = await $.getJSON('http://localhost:3000/landkreis');
-        let coordinates = stuttgartGeoJSON.features[0].geometry.coordinates[0]; // coordinates are nested arrays, there is only a single polygon
-        for (let i = 0; i < coordinates.length; i++) {
-            let point = coordinates[i];
-            coordinates[i] = converter.inverse(point);
         }
 
-        let worldShadow = [
-            [180, -90],
-            [180, 90],
-            [-180, 90],
-            [-180, -90]];
+        function filterWantedSensors(dustSensors, hour, minute, bounds, reverseStuttgartPolygon, p2) {
+            // dust sensors are all sensors with all measurements from 1 day
+            // this returns an array of sensors with values for the requested time only
+            let necessarySensors = [];
+            for (let key in dustSensors) {
+                try {
+                    let entry = {};
+                    let sensor = dustSensors[key][hour][minute];
+                    entry.lon = parseFloat(sensor.lon);
+                    entry.lat = parseFloat(sensor.lat);
 
-        stuttgartGeoJSON.features[0].geometry.coordinates[0] = coordinates;
+                    // e.g. 10.1.2020 ids: 3651=2730 are duplicates
+                    if ((isDuplicate(necessarySensors, entry)) ||
+                        (isOutsidePolygon(entry, reverseStuttgartPolygon))) {
+                        continue;
+                    }
 
-        // adds large polygon before stuttgart to make it a cutout
-        stuttgartGeoJSON.features[0].geometry.coordinates.unshift(worldShadow);
-        return stuttgartGeoJSON;
-    }
-
-    function addLayer(stuttgartGeoJSON, stuttgart) {
-        L.geoJSON(stuttgartGeoJSON.features, {
-            style: {
-                "color": "#222222",
-                "weight": 5,
-                "fillOpacity": 0.5
+                    entry.dust = (p2) ? sensor.p2 : sensor.p1;
+                    entry.id = key;
+                    necessarySensors.push(entry);
+                } catch (e) {
+                    // console.log(e);
+                    console.log("no value for id: " + key + " hour: " + hour + " minute: " + minute);
+                }
             }
-        }).addTo(stuttgart);
-    }
+            addCells(necessarySensors, bounds, reverseStuttgartPolygon);
+            return necessarySensors;
+        }
 
-    function initialize() {
-        var Esri_WorldImagery = L.tileLayer(
-            "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            {
-                attribution:
-                    "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, " +
-                    "AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
-                minZoom: 11
+        function addCells(wantedSensors, bounds, stuttgartCutoutPolygon) {
+            // this calculates the cell surrounding the center by intersection with the Stuttgart polygon
+            let delaunay = new d3.Delaunay(getPoints(wantedSensors));
+
+            let voronoi = delaunay.voronoi(bounds);
+
+            let cells = voronoi.cellPolygons();
+            let i = 0;
+            for (let cell of cells) {
+                wantedSensors[i].cell = intersection(cell, stuttgartCutoutPolygon);
+                i++;
             }
-        );
-        let osm = new L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-            minZoom: 12,
-            maxZoom: 2,
-            renderer: L.svg(),
-        });
-        timeForm.dispatchEvent(new Event("submit"));
+        }
 
-        let center = L.latLng(48.8, 9.2);
-        let zoom = 11;
-        map = L.map('map_canvas').setView(center, zoom);
 
-        console.log(osm);
-        map.addLayer(osm);
-        map.addLayer(Esri_WorldImagery);
+        async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, p2) {
+            let centerLayer = L.layerGroup();
+            let voronoiLayer = L.layerGroup();
+            let dustSensors = await dustSensorPromise;
 
-        dustsensors = L.layerGroup().addTo(map);
-        // let voronoiLayer = L.layerGroup().addTo(map);
-        let stuttgartLayer = L.layerGroup().addTo(map);
-        // let centerLayer = L.layerGroup();
+            let bounds = [9.036, 48.68972, 9.3164, 48.8697];
 
-        getStuttgartPolygons().then((stuttgartGeoJSON) => {
-            addLayer(stuttgartGeoJSON, stuttgartLayer);
+            let wantedSensors = filterWantedSensors(dustSensors, hour, minute, bounds, reverseStuttgartPolygon, p2);
 
-            timeForm.addEventListener('submit', function updateTimeRange(e) {
-                let timeForm = document.getElementById('form');
-                let dateInput = document.getElementById('from');
-                let periodInput = document.getElementById('to');
-                console.log(dateInput.value);
+            for (let i = 0; i < wantedSensors.length; i++) {
+                let sensor = wantedSensors[i];
+                let cell = sensor.cell;
+                if ((cell !== undefined) && (cell !== null)) {
+                    let polygon = L.polygon(cell, {
+                        fillColor: getColor(sensor.dust),
+                        color: "#222222",
+                        weight: 2,
+                        fillOpacity: 0.6
+                    });
+                    polygon.bindPopup("Polygon #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
+                    polygon.addTo(voronoiLayer);
+                } else {
+                    console.log("No polygon for sensor, possibly out of area");
+                    console.log(sensor)
+                }
+                let center = L.rectangle([[sensor.lat, sensor.lon], [sensor.lat, sensor.lon]], {
+                    color: "#222222",
+                    weight: 3
+                });
+                center.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
+                center.addTo(centerLayer);
+            }
+            // voronoiLayer.addTo(map);
+            // centerLayer.addTo(map);
+            return { Sensoren: centerLayer, Voronoi: voronoiLayer };
+        }
 
-                let date = new Date(dateInput.value);
-                console.log(date);
-                let period = periodInput.value;
-                console.log(period);
-                // WindJSLeaflet._clearWind();
+        async function getStuttgartPolygons() {
+            let converter = getCoordConverter();
+            let stuttgartGeoJSON = await $.getJSON('http://localhost:3000/landkreis');
+            let coordinates = stuttgartGeoJSON.features[0].geometry.coordinates[0]; // coordinates are nested arrays, there is only a single polygon
+            for (let i = 0; i < coordinates.length; i++) {
+                let point = coordinates[i];
+                coordinates[i] = converter.inverse(point);
+            }
 
-                setupSlider(date, period, stuttgartGeoJSON);
-                //getDustSensorsByDate(date.year, date.month, date.day);
-                e.preventDefault();
+            let worldShadow = [
+                [180, -90],
+                [180, 90],
+                [-180, 90],
+                [-180, -90]];
+
+            stuttgartGeoJSON.features[0].geometry.coordinates[0] = coordinates;
+
+            // adds large polygon before stuttgart to make it a cutout
+            stuttgartGeoJSON.features[0].geometry.coordinates.unshift(worldShadow);
+            return stuttgartGeoJSON;
+        }
+
+        function addLayer(stuttgartGeoJSON, stuttgart) {
+            L.geoJSON(stuttgartGeoJSON.features, {
+                style: {
+                    "color": "#222222",
+                    "weight": 5,
+                    "fillOpacity": 0.5
+                }
+            }).addTo(stuttgart);
+        }
+
+        function initialize() {
+            var Esri_WorldImagery = L.tileLayer(
+                "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                {
+                    attribution:
+                        "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, " +
+                        "AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+                    minZoom: 11
+                }
+            );
+            let osm = new L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+                minZoom: 12,
+                maxZoom: 2,
+                renderer: L.svg(),
             });
             timeForm.dispatchEvent(new Event("submit"));
 
-            // start slider here
-            // let year = 2020;
-            // let month = 1;
-            // let day = 1;
-            // let hour = 15;
-            // let minute = 50;
-            // let dustSensorsPromise = getDustSensorsByDate(year, month, day);
-            // drawVoronoi(dustSensorsPromise, hour, minute, stuttgartGeoJSON.features[0].geometry.coordinates[1], voronoiLayer, centerLayer);
-        });
+            let center = L.latLng(48.8, 9.2);
+            let zoom = 11;
+            map = L.map('map_canvas').setView(center, zoom);
 
-        let background = {"Clear map": osm, Satellite: Esri_WorldImagery};
-        foreground = {};
-        layerControl = L.control.layers(background, foreground, {collapsed: false}).addTo(map);
+            console.log(osm);
+            map.addLayer(osm);
+            map.addLayer(Esri_WorldImagery);
 
-        //pastData(layerControl, timestamp);
-        // currentData(layerControl)
-        // setInterval(function () {
-        //     currentData(layerControl)
-        // }, 300000)
-        let today = new Date().toISOString();
-        // setupWindApi(layerControl, today);
-    }
+            dustsensors = L.layerGroup().addTo(map);
+            // let voronoiLayer = L.layerGroup().addTo(map);
+            let stuttgartLayer = L.layerGroup().addTo(map);
+            // let centerLayer = L.layerGroup();
 
-    function setupSlider(start, end, stuttgartGeoJSON) {
-        if (start == undefined) {
-            start = new Date();
+            getStuttgartPolygons().then((stuttgartGeoJSON) => {
+                addLayer(stuttgartGeoJSON, stuttgartLayer);
+
+                timeForm.addEventListener('submit', function updateTimeRange(e) {
+                    let timeForm = document.getElementById('form');
+                    let dateInput = document.getElementById('from');
+                    let periodInput = document.getElementById('to');
+                    console.log(dateInput.value);
+
+                    let date = new Date(dateInput.value);
+                    console.log(date);
+                    let period = periodInput.value;
+                    console.log(period);
+                    // WindJSLeaflet._clearWind();
+
+                    setupSlider(date, period, stuttgartGeoJSON);
+                    //getDustSensorsByDate(date.year, date.month, date.day);
+                    e.preventDefault();
+                });
+                timeForm.dispatchEvent(new Event("submit"));
+
+                // start slider here
+                // let year = 2020;
+                // let month = 1;
+                // let day = 1;
+                // let hour = 15;
+                // let minute = 50;
+                // let dustSensorsPromise = getDustSensorsByDate(year, month, day);
+                // drawVoronoi(dustSensorsPromise, hour, minute, stuttgartGeoJSON.features[0].geometry.coordinates[1], voronoiLayer, centerLayer);
+            });
+
+            let background = { "Clear map": osm, Satellite: Esri_WorldImagery };
+            foreground = {};
+            layerControl = L.control.layers(background, foreground, { collapsed: false }).addTo(map);
+
+            //pastData(layerControl, timestamp);
+            // currentData(layerControl)
+            // setInterval(function () {
+            //     currentData(layerControl)
+            // }, 300000)
+            let today = new Date().toISOString();
+            // setupWindApi(layerControl, today);
         }
-        if (end == undefined) {
-            end = new Date();
-        }
-        $('.slider-time').html(start);
 
-        let min_val = new Date(start) / 1000;
-        let max_val = new Date(end) / 1000;
-        tempval = min_val;
+        function setupSlider(start, end, stuttgartGeoJSON) {
+            if (start == undefined) {
+                start = new Date();
+            }
+            if (end == undefined) {
+                end = new Date();
+            }
+            $('.slider-time').html(start);
 
-        renderVoronoi(start, stuttgartGeoJSON);
-        setupWindApi(start);
+            let min_val = new Date(start) / 1000;
+            let max_val = new Date(end) / 1000;
 
-        $("#slider-range").slider({
-            range: false,
-            min: min_val,
-            max: max_val,
-            step: 600, //in seconds --> 6min
-            values: [min_val],
-            slide: function (e, ui) {
-                let currentTime = new Date(ui.values[0] * 1000); //.format("yyyy-mm-dd hh:ii:ss");
-                $('.slider-time').html(currentTime);
+            renderVoronoi(start, stuttgartGeoJSON);
+            setupWindApi(start);
 
-                if (Math.abs(ui.values[0] - tempval) > 21600) {
+            $("#slider-range").slider({
+                range: false,
+                min: min_val,
+                max: max_val,
+                step: 600, //in seconds --> 6min
+                values: [min_val],
+                stop: function (e, ui) {
+                    let currentTime = new Date(ui.values[0] * 1000); //.format("yyyy-mm-dd hh:ii:ss");
+                    $('.slider-time').html(currentTime);
                     setupWindApi(currentTime);
-                    tempval = ui.values[0];
-                }
-                renderVoronoi(currentTime, stuttgartGeoJSON);
-            }
-        });
-    }
-
-    function renderVoronoi(currentTime, stuttgartGeoJSON) {
-        let dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
-        let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
-        layersPromise.then(layers => {
-            console.log("doing");
-            let voronoi = "Voronoi";
-            let center = "Sensoren";
-            if (map.hasLayer(foreground[voronoi])) {
-                map.removeLayer(foreground[voronoi]);
-                layerControl.removeLayer(foreground[voronoi]);
-            }
-            if (map.hasLayer(foreground[center])) {
-                map.removeLayer(foreground[center]);
-                layerControl.removeLayer(foreground[center]);
-            }
-            foreground[voronoi] = layers[voronoi];
-            layerControl.addOverlay(foreground[voronoi], voronoi);
-            map.addLayer(foreground[voronoi]);
-            foreground[center] = layers[center];
-            layerControl.addOverlay(foreground[center], center);
-            map.addLayer(foreground[center]);
-        });
-    }
-
-    let velocityLayer;
-
-    function setupWindApi(date) {
-        $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=3", function (data) {
-            if (map.hasLayer(foreground["Wind"])) {
-                console.log(velocityLayer);
-                velocityLayer.setData(data);
-                return;
-            }
-            velocityLayer = L.velocityLayer({
-                displayValues: true,
-                displayOptions: {
-                    velocityType: "Global Wind",
-                    angleConvention: 'bearingCW',
-                    displayPosition: "bottomleft",
-                    displayEmptyString: "No wind data",
-                    speedUnit: 'km/h'
+                    renderVoronoi(currentTime, stuttgartGeoJSON);
                 },
-                data: data,
-                velocityScale: 0.01,
-                onAdd: null,          // callback function
-                onRemove: null,       // callback function
-            });
-
-            foreground["Wind"] = velocityLayer;
-            layerControl.addOverlay(foreground["Wind"], "Wind");
-            map.addLayer(foreground["Wind"]);
-        });
-    }
-
-    function currentData(layerControl) {
-        $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
-            console.log(data);
-            let timestamp = data[0].timestamp;
-            dustsensors = L.layerGroup({timestamp});
-            layerControl.addOverlay(dustsensors, "Feinstaub")
-            data.forEach(element => {
-                let marker = L.marker([element.location.latitude, element.location.longitude], {time: timestamp}).addTo(dustsensors);
-                if (marker !== undefined) {
-                    marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + timestamp);
+                slide: function (e, ui) {
+                    let currentTime = new Date(ui.values[0] * 1000); //.format("yyyy-mm-dd hh:ii:ss");
+                    $('.slider-time').html(currentTime);
                 }
             });
-            setupWindApi(layerControl, timestamp);
-        })
-    }
+        }
 
-    function pastData(layerControl, time) {
-        $.getJSON('http://localhost:3000/dust/all/2020-1-8', function (data) {
-            console.log(data);
-            let hour = time.hour;
-            let minute = time.minute;
-            dustsensors = L.layerGroup();
-            layerControl.addOverlay(dustsensors, "Feinstaub")
-            let number = 140;
-            console.log(data[number][hour][minute]);
-            console.log(data.length);
-            console.log(Object.entries(data));
-            for (let obj of Object.entries(data)) {
-                if (obj[1][hour] != undefined && obj[1][hour][minute] != undefined) {
-                    let element = obj[1][hour][minute];
-                    console.log(element);
-                    let marker = L.marker([element.lat, element.lon], {time: (time.hour + time.minute)}).addTo(dustsensors);
+        function renderVoronoi(currentTime, stuttgartGeoJSON) {
+            let dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
+            let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
+            layersPromise.then(layers => {
+                console.log("doing");
+                let voronoi = "Voronoi";
+                let center = "Sensoren";
+                if (map.hasLayer(foreground[voronoi])) {
+                    map.removeLayer(foreground[voronoi]);
+                    layerControl.removeLayer(foreground[voronoi]);
+                }
+                if (map.hasLayer(foreground[center])) {
+                    map.removeLayer(foreground[center]);
+                    layerControl.removeLayer(foreground[center]);
+                }
+                foreground[voronoi] = layers[voronoi];
+                layerControl.addOverlay(foreground[voronoi], voronoi);
+                map.addLayer(foreground[voronoi]);
+                foreground[center] = layers[center];
+                layerControl.addOverlay(foreground[center], center);
+                map.addLayer(foreground[center]);
+            });
+        }
+
+        let velocityLayer;
+
+        function setupWindApi(date) {
+            $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=3", function (data) {
+                if (map.hasLayer(foreground["Wind"])) {
+                    console.log(velocityLayer);
+                    velocityLayer.setData(data);
+                    return;
+                }
+                velocityLayer = L.velocityLayer({
+                    displayValues: true,
+                    displayOptions: {
+                        velocityType: "Global Wind",
+                        angleConvention: 'bearingCW',
+                        displayPosition: "bottomleft",
+                        displayEmptyString: "No wind data",
+                        speedUnit: 'km/h'
+                    },
+                    data: data,
+                    velocityScale: 0.01,
+                    onAdd: null,          // callback function
+                    onRemove: null,       // callback function
+                });
+
+                foreground["Wind"] = velocityLayer;
+                layerControl.addOverlay(foreground["Wind"], "Wind");
+                map.addLayer(foreground["Wind"]);
+            });
+        }
+
+        function currentData(layerControl) {
+            $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
+                console.log(data);
+                let timestamp = data[0].timestamp;
+                dustsensors = L.layerGroup({ timestamp });
+                layerControl.addOverlay(dustsensors, "Feinstaub")
+                data.forEach(element => {
+                    let marker = L.marker([element.location.latitude, element.location.longitude], { time: timestamp }).addTo(dustsensors);
                     if (marker !== undefined) {
-                        marker.bindPopup("Sensor p1: " + element.p1 + " p2: " + element.p2 + "<br/> Time: " + time.hour + ":" + time.minute);
+                        marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + timestamp);
+                    }
+                });
+                setupWindApi(layerControl, timestamp);
+            })
+        }
+
+        function pastData(layerControl, time) {
+            $.getJSON('http://localhost:3000/dust/all/2020-1-8', function (data) {
+                console.log(data);
+                let hour = time.hour;
+                let minute = time.minute;
+                dustsensors = L.layerGroup();
+                layerControl.addOverlay(dustsensors, "Feinstaub")
+                let number = 140;
+                console.log(data[number][hour][minute]);
+                console.log(data.length);
+                console.log(Object.entries(data));
+                for (let obj of Object.entries(data)) {
+                    if (obj[1][hour] != undefined && obj[1][hour][minute] != undefined) {
+                        let element = obj[1][hour][minute];
+                        console.log(element);
+                        let marker = L.marker([element.lat, element.lon], { time: (time.hour + time.minute) }).addTo(dustsensors);
+                        if (marker !== undefined) {
+                            marker.bindPopup("Sensor p1: " + element.p1 + " p2: " + element.p2 + "<br/> Time: " + time.hour + ":" + time.minute);
+                        }
                     }
                 }
-            }
 
-            //setupWindApi(layerControl, timestamp);
-            // let geojson_now = L.geoJson(array, { time: timestamp });
+                //setupWindApi(layerControl, timestamp);
+                // let geojson_now = L.geoJson(array, { time: timestamp });
 
 
-        })
-    }
+            })
+        }
 
-    function loadapi() {
-        $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.774,9.174,10', function (data) {
-            console.log(data);
-            data.forEach(element => {
-                let marker = L.marker([element.location.latitude, element.location.longitude]).addTo(dustsensors);
-                if (marker !== undefined) {
-                    marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + element.timestamp);
-                }
-            });
+        function loadapi() {
+            $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.774,9.174,10', function (data) {
+                console.log(data);
+                data.forEach(element => {
+                    let marker = L.marker([element.location.latitude, element.location.longitude]).addTo(dustsensors);
+                    if (marker !== undefined) {
+                        marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + element.timestamp);
+                    }
+                });
 
-        })
-    }
+            })
+        }
 
-</script>
-<script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+    </script>
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
 
 </body>
 
