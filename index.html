@@ -294,7 +294,7 @@
                         weight: 2,
                         fillOpacity: 0.6
                     });
-                    polygon.bindPopup("Polygon #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
+                    polygon.bindPopup("Polygon #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust + " μg/m<sup>3</sup>");
                     polygon.addTo(voronoiLayer);
                 } else {
                     console.log("No polygon for sensor, possibly out of area");
@@ -304,7 +304,7 @@
                     color: "#222222",
                     weight: 3
                 });
-                center.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
+                center.bindPopup("Sensor #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust + " μg/m<sup>3</sup>");
                 center.addTo(centerLayer);
             }
             // voronoiLayer.addTo(map);
@@ -591,7 +591,8 @@
                     rotationAngle: data.direction
                 });
                 let direction = (data.direction > 180) ? data.direction - 180 : data.direction + 180;
-                marker.bindPopup("Wind speed: " + data.speed + " direction: " + direction);
+                marker.bindPopup("Wind speed: " + data.speed + " m/s direction: " + direction + " degree");
+
                 marker.addTo(windLayer);
             });
         }
