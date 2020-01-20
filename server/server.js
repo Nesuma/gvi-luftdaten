@@ -1,6 +1,10 @@
 const express = require('express');
+const yauzl = require("yauzl");
+const unzipper = require('unzipper');
+const zlib = require('zlib');
+const extract = require('extract-zip');
 const fs = require('fs');
-const csp = require(`helmet-csp`)
+const csp = require(`helmet-csp`);
 const {promisify} = require('util');
 //const request = require('request');
 const path = require('path')
@@ -253,12 +257,76 @@ function getCoordinates(metadata) {
     return {lat: lat, lon: lon};
 }
 
+async function downloadWindData(stationPromises) {
+    // sorry for this
+    let zips = "../data/wind/zips/";
+    let measurements = "../data/wind/measurements/";
+
+    let promises = [];
+
+    let paths = [
+        {
+            link: "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/wind/now/",
+            file: "10minutenwerte_wind_0",
+            ending: "_now.zip"
+        },
+        {
+            link: "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/wind/recent/",
+            file: "10minutenwerte_wind_0",
+            ending: "_akt.zip"
+        }
+    ];
+
+    for (let i = 0; i < paths.length; i++) {
+        for (const [filename, dataPromise] of Object.entries(stationPromises)) {
+            let numId = extractSensorId(filename);
+            let link = paths[i].link + paths[i].file + numId + paths[i].ending;
+            let writeStream = fs.createWriteStream(zips + paths[i].file + numId + paths[i].ending);
+            promises.push(new Promise(resolve => {
+                request_promise(link)
+                    .pipe(writeStream)
+                    .on("close", function () {
+                        let localFilename = paths[i].file + numId + paths[i].ending;
+                        yauzl.open(zips + localFilename, {lazyEntries: true}, function (err, zipfile) {
+                            if (err) throw err;
+                            zipfile.readEntry();
+                            zipfile.on("entry", function (entry) {
+                                if (/\/$/.test(entry.fileName)) {
+                                    zipfile.readEntry();
+                                } else {
+                                    // file entry
+                                    zipfile.openReadStream(entry, function (err, readStream) {
+                                        if (err) throw err;
+                                        readStream.on("end", function () {
+                                            zipfile.readEntry();
+                                        });
+                                        readStream.pipe(fs.createWriteStream(measurements + `${localFilename.slice(0, -4)}` + ".txt")).on("close", function () {
+                                            resolve();
+                                            console.log("downloaded " + localFilename);
+                                        });
+                                    });
+                                }
+                            });
+                        });
+                    });
+            }));
+        }
+    }
+    for (let i = 0; i < promises.length; i++) {
+        await promises[i];
+    }
+    console.log("Finished writing all files");
+
+}
+
 async function getWindSensors() {
     let sensors = {};
 
     // async: reading the files from disk
     const measurementPromises = readFilesRecursively("../data/wind/measurements/");
     const stationPromises = readFilesRecursively('../data/wind/stations/');
+
+    await downloadWindData(stationPromises);
 
     let sensorDataPromises = {};
     let sensorCoordinatePromises = {};
