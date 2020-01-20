@@ -278,7 +278,7 @@ async function downloadWindData(stationPromises) {
     ];
 
     for (let i = 0; i < paths.length; i++) {
-        for (const [filename, dataPromise] of Object.entries(stationPromises)) {
+        for (const [filename, dataPromise] of Object.entries(await stationPromises)) {
             let numId = extractSensorId(filename);
             let link = paths[i].link + paths[i].file + numId + paths[i].ending;
             let writeStream = fs.createWriteStream(zips + paths[i].file + numId + paths[i].ending);
@@ -300,9 +300,9 @@ async function downloadWindData(stationPromises) {
                                         readStream.on("end", function () {
                                             zipfile.readEntry();
                                         });
-                                        readStream.pipe(fs.createWriteStream(measurements + `${localFilename.slice(0, -4)}` + ".txt")).on("close", function () {
+                                        readStream.pipe(fs.createWriteStream(measurements + entry.fileName)).on("close", function () {
                                             resolve();
-                                            console.log("downloaded " + localFilename);
+                                            console.log("downloaded " + entry.fileName);
                                         });
                                     });
                                 }
@@ -323,10 +323,9 @@ async function getWindSensors() {
     let sensors = {};
 
     // async: reading the files from disk
-    const measurementPromises = readFilesRecursively("../data/wind/measurements/");
     const stationPromises = readFilesRecursively('../data/wind/stations/');
-
     await downloadWindData(stationPromises);
+    const measurementPromises = readFilesRecursively("../data/wind/measurements/");
 
     let sensorDataPromises = {};
     let sensorCoordinatePromises = {};
