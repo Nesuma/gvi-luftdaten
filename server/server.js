@@ -258,11 +258,11 @@ function getCoordinates(metadata) {
 }
 
 async function downloadWindData(stationPromises) {
+    // sorry for this
     let zips = "../data/wind/zips/";
     let measurements = "../data/wind/measurements/";
 
     let promises = [];
-    let files = [];
 
     let paths = [
         {
@@ -286,8 +286,28 @@ async function downloadWindData(stationPromises) {
                 request_promise(link)
                     .pipe(writeStream)
                     .on("close", function () {
-                        resolve();
-                        console.log("downloaded" + filename);
+                        let localFilename = paths[i].file + numId + paths[i].ending;
+                        yauzl.open(zips + localFilename, {lazyEntries: true}, function (err, zipfile) {
+                            if (err) throw err;
+                            zipfile.readEntry();
+                            zipfile.on("entry", function (entry) {
+                                if (/\/$/.test(entry.fileName)) {
+                                    zipfile.readEntry();
+                                } else {
+                                    // file entry
+                                    zipfile.openReadStream(entry, function (err, readStream) {
+                                        if (err) throw err;
+                                        readStream.on("end", function () {
+                                            zipfile.readEntry();
+                                        });
+                                        readStream.pipe(fs.createWriteStream(measurements + `${localFilename.slice(0, -4)}` + ".txt")).on("close", function () {
+                                            resolve();
+                                            console.log("downloaded " + localFilename);
+                                        });
+                                    });
+                                }
+                            });
+                        });
                     });
             }));
         }
@@ -296,33 +316,7 @@ async function downloadWindData(stationPromises) {
         await promises[i];
     }
     console.log("Finished writing all files");
-    const directoryFiles = fs.readdirSync(zips);
-    try {
-        console.log("directoryFiles");
-        console.log(directoryFiles);
-        directoryFiles.forEach(filename => {
-            yauzl.open(zips + filename, {lazyEntries: true}, function (err, zipfile) {
-                if (err) throw err;
-                zipfile.readEntry();
-                zipfile.on("entry", function (entry) {
-                    if (/\/$/.test(entry.fileName)) {
-                        zipfile.readEntry();
-                    } else {
-                        // file entry
-                        zipfile.openReadStream(entry, function (err, readStream) {
-                            if (err) throw err;
-                            readStream.on("end", function () {
-                                zipfile.readEntry();
-                            });
-                            readStream.pipe(fs.createWriteStream(measurements + `${filename.slice(0, -4)}` + ".txt"));
-                        });
-                    }
-                });
-            });
-        });
-    } catch (e) {
 
-    }
 }
 
 async function getWindSensors() {
