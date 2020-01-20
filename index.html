@@ -57,12 +57,12 @@
 
         #time-ranges {
             position: fixed;
-            top: 43px;
+            top: 68px;
             left: 50%;
             margin-right: -50%;
             transform: translate(-50%, -50%);
             z-index: 1000;
-            padding: 1em;
+            padding: 0 1em 1em 1em;
             background: white;
             font-family: Helvetica Neue, Arial, Helvetica, sans-serif;
         }
@@ -131,6 +131,7 @@
     </div>
     <div id="time-ranges" class="leaflet-bar">
         <form action="#" id="form">
+            <h2>Visual Analysis of Stuttgart's Air Quality</h2>
             <label for="from">
                 From
                 <input id="from" type="date" value="2020-01-17" name="from" min="2018-07-07">
@@ -308,7 +309,7 @@
             }
             // voronoiLayer.addTo(map);
             // centerLayer.addTo(map);
-            return { Sensoren: centerLayer, Voronoi: voronoiLayer };
+            return { Sensors: centerLayer, Voronoi: voronoiLayer };
         }
         async function getStuttgartPolygons() {
             let converter = getCoordConverter();
@@ -510,7 +511,7 @@
             layersPromise.then(layers => {
                 console.log("doing");
                 let voronoi = "Voronoi";
-                let center = "Sensoren";
+                let center = "Sensors";
                 if (map.hasLayer(foreground[voronoi])) {
                     map.removeLayer(foreground[voronoi]);
                     layerControl.removeLayer(foreground[voronoi]);
