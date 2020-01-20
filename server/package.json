@@ -17,7 +17,6 @@
     "request": "^2.88.0",
     "request-promise-native": "^1.0.8",
     "unzipper": "^0.10.5",
-    "yauzl": "^2.10.0",
-    "zlib": "^1.0.5"
+    "yauzl": "^2.10.0"
   }
 }
