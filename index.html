@@ -411,16 +411,11 @@
                     let v;
                     if (from.value == to.max) {
                         console.log("current data");
-                        currentData(new Date(), stuttgartGeoJSON);
                         $("#slider-range").slider("destroy");
-                        display_time();
-                        v = setInterval(function () {
-                            currentData(new Date(), stuttgartGeoJSON);
-                            display_time();
-                        }, 300000)
+                        updateCurrentData(stuttgartGeoJSON);
                     } else {
                         clearTimeout(timeoutTime);
-                        clearInterval(v);
+                        clearTimeout(updateTime);
                         setupSlider(date, period, stuttgartGeoJSON);
                     }
                     //getDustSensorsByDate(date.year, date.month, date.day);
@@ -483,6 +478,13 @@
                     $('.slider-time').html(currentTime);
                 }
             });
+        }
+
+        let updateTime;
+        function updateCurrentData(stuttgartGeoJSON) {
+            currentData(new Date(), stuttgartGeoJSON);
+            display_time();
+            updateTime = setTimeout(updateCurrentData.bind(null, stuttgartGeoJSON), 300000);
         }
 
         let timeoutTime;
@@ -596,8 +598,6 @@
         async function currentData(currentTime, stuttgartGeoJSON) {
             await $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.774,9.174,10', function (data) {
                 let json = {};
-                console.log(data);
-
                 data.forEach(element => {
                     let id = element.sensor.id;
                     json[id] = {};
@@ -605,8 +605,6 @@
                     json[id]["0"]["0"] = {};
                     element.sensordatavalues.forEach(value => {
                         if (value.value_type == "P1") {
-                            console.log(value.value);
-
                             json[id]["0"]["0"]["p1"] = value.value;
                         } else if (value.value_type == "P2") {
                             json[id]["0"]["0"]["p2"] = value.value;
