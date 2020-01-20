@@ -85,17 +85,6 @@
             border-color: #5C7DB8;
         }
 
-        #to select {
-            padding: 0 1em;
-        }
-
-        #to {
-            font-size: 14px;
-            height: 30px;
-            padding: 0 1em;
-            text-transform: uppercase;
-        }
-
         #map_canvas {
             width: 100%;
             height: 100%;
@@ -423,6 +412,7 @@
                     if (from.value == to.max) {
                         console.log("current data");
                         currentData(new Date(), stuttgartGeoJSON);
+                        $("#slider-range").slider( "destroy" );
                         display_time();
                         v = setInterval(function () {
                             currentData(new Date(), stuttgartGeoJSON);
