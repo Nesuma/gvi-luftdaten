@@ -354,6 +354,7 @@
             maxZoom: 2,
             renderer: L.svg(),
         });
+        timeForm.dispatchEvent(new Event("submit"));
 
         let center = L.latLng(48.8, 9.2);
         let zoom = 11;
@@ -371,12 +372,10 @@
         getStuttgartPolygons().then((stuttgartGeoJSON) => {
             addLayer(stuttgartGeoJSON, stuttgartLayer);
 
-            let timeForm = document.getElementById('form');
-            let dateInput = document.getElementById('from');
-            let periodInput = document.getElementById('to');
-            from.max = new Date().toISOString().split("T")[0];
-            from.value = from.max;
             timeForm.addEventListener('submit', function updateTimeRange(e) {
+                let timeForm = document.getElementById('form');
+                let dateInput = document.getElementById('from');
+                let periodInput = document.getElementById('to');
                 console.log(dateInput.value);
 
                 let date = new Date(dateInput.value);
@@ -414,42 +413,21 @@
         // setupWindApi(layerControl, today);
     }
 
-    let tempval;
-
-    function setupSlider(start, end,stuttgartGeoJSON) {
+    function setupSlider(start, end, stuttgartGeoJSON) {
         if (start == undefined) {
             start = new Date();
         }
         if (end == undefined) {
             end = new Date();
         }
-        $('.slider-time').html(formatDT(start));
+        $('.slider-time').html(start);
 
         let min_val = new Date(start) / 1000;
         let max_val = new Date(end) / 1000;
         tempval = min_val;
 
-        function zeroPad(num, places) {
-            var zero = places - num.toString().length + 1;
-            return Array(+(zero > 0 && zero)).join("0") + num;
-        }
-
-        function formatDT(fullDate) {
-            var year = fullDate.getFullYear();
-            console.log(fullDate.getMonth() + 1);
-
-            var month = zeroPad(fullDate.getMonth() + 1, 2);
-            var date = zeroPad(fullDate.getDate(), 2);
-            var hours = zeroPad(fullDate.getHours(), 2);
-            var minutes = zeroPad(fullDate.getMinutes(), 2);
-            var seconds = zeroPad(fullDate.getSeconds(), 2);
-            return year + '-' + month + '-' + date + ' ' + hours + ':' + minutes + ':' + seconds;
-        };
-
-        renderVoronoi(start,stuttgartGeoJSON);
-
-        console.log("setupWindApi(formatDT(start))");
-        setupWindApi(formatDT(start));
+        renderVoronoi(start, stuttgartGeoJSON);
+        setupWindApi(start);
 
         $("#slider-range").slider({
             range: false,
@@ -459,19 +437,18 @@
             values: [min_val],
             slide: function (e, ui) {
                 let currentTime = new Date(ui.values[0] * 1000); //.format("yyyy-mm-dd hh:ii:ss");
-                let formattedTime = formatDT(currentTime);
-                $('.slider-time').html(formattedTime);
+                $('.slider-time').html(currentTime);
 
                 if (Math.abs(ui.values[0] - tempval) > 21600) {
-                    setupWindApi(new Date(formattedTime));
+                    setupWindApi(currentTime);
                     tempval = ui.values[0];
                 }
-                renderVoronoi(currentTime,stuttgartGeoJSON);
+                renderVoronoi(currentTime, stuttgartGeoJSON);
             }
         });
     }
 
-    function renderVoronoi(currentTime,stuttgartGeoJSON){
+    function renderVoronoi(currentTime, stuttgartGeoJSON) {
         let dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
         let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
         layersPromise.then(layers => {
@@ -495,13 +472,16 @@
         });
     }
 
+    let velocityLayer;
+
     function setupWindApi(date) {
         $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=3", function (data) {
             if (map.hasLayer(foreground["Wind"])) {
-                map.removeLayer(foreground["Wind"]);
-                layerControl.removeLayer(foreground["Wind"]);
+                console.log(velocityLayer);
+                velocityLayer.setData(data);
+                return;
             }
-            let velocityLayer = L.velocityLayer({
+            velocityLayer = L.velocityLayer({
                 displayValues: true,
                 displayOptions: {
                     velocityType: "Global Wind",
@@ -511,6 +491,7 @@
                     speedUnit: 'km/h'
                 },
                 data: data,
+                velocityScale: 0.01,
                 onAdd: null,          // callback function
                 onRemove: null,       // callback function
             });
