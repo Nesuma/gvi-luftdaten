@@ -247,6 +247,8 @@
                     necessarySensors.push(entry);
                 } catch (e) {
                     // console.log(e);
+                    console.log(dustSensors);
+
                     console.log("no value for id: " + key + " hour: " + hour + " minute: " + minute);
                 }
             }
@@ -270,6 +272,8 @@
 
 
         async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, p2) {
+            console.log(hour + minute);
+
             let centerLayer = L.layerGroup();
             let voronoiLayer = L.layerGroup();
             let dustSensors = await dustSensorPromise;
@@ -383,8 +387,18 @@
                     let period = periodInput.value;
                     console.log(period);
                     // WindJSLeaflet._clearWind();
-
-                    setupSlider(date, period, stuttgartGeoJSON);
+                    if (from.value == to.max) {
+                        console.log("current data");
+                        currentData(new Date(), stuttgartGeoJSON);
+                        $("#slider-range").slider("destroy");
+                        display_time();
+                        setInterval(function () {
+                            currentData(new Date(), stuttgartGeoJSON);
+                            display_time();
+                        }, 300000)
+                    } else {
+                        setupSlider(date, period, stuttgartGeoJSON);
+                    }
                     //getDustSensorsByDate(date.year, date.month, date.day);
                     e.preventDefault();
                 });
@@ -409,7 +423,6 @@
             // setInterval(function () {
             //     currentData(layerControl)
             // }, 300000)
-            let today = new Date().toISOString();
             // setupWindApi(layerControl, today);
         }
 
@@ -432,7 +445,7 @@
                 range: false,
                 min: min_val,
                 max: max_val,
-                step: 600, //in seconds --> 6min
+                step: 600, //in seconds --> 10min
                 values: [min_val],
                 stop: function (e, ui) {
                     let currentTime = new Date(ui.values[0] * 1000); //.format("yyyy-mm-dd hh:ii:ss");
@@ -447,8 +460,22 @@
             });
         }
 
-        function renderVoronoi(currentTime, stuttgartGeoJSON) {
-            let dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
+        function display_time() {
+            let currentTime = new Date();
+            $('.slider-time').html(currentTime);
+            setTimeout('display_time()', 1000);
+        }
+
+        function renderVoronoi(currentTime, stuttgartGeoJSON, data) {
+            let dustSensorPromise;
+            if (data == undefined) {
+                dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
+            } else {
+                console.log("current data");
+                currentTime.setHours(0, 0, 0, 0);
+                dustSensorPromise = data;
+            }
+
             let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
             layersPromise.then(layers => {
                 console.log("doing");
@@ -501,61 +528,30 @@
             });
         }
 
-        function currentData(layerControl) {
-            $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
-                console.log(data);
-                let timestamp = data[0].timestamp;
-                dustsensors = L.layerGroup({ timestamp });
-                layerControl.addOverlay(dustsensors, "Feinstaub")
+        async function currentData(currentTime, stuttgartGeoJSON) {
+            await $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.774,9.174,10', function (data) {
+                let json = {};
                 data.forEach(element => {
-                    let marker = L.marker([element.location.latitude, element.location.longitude], { time: timestamp }).addTo(dustsensors);
-                    if (marker !== undefined) {
-                        marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + timestamp);
-                    }
-                });
-                setupWindApi(layerControl, timestamp);
-            })
-        }
-
-        function pastData(layerControl, time) {
-            $.getJSON('http://localhost:3000/dust/all/2020-1-8', function (data) {
-                console.log(data);
-                let hour = time.hour;
-                let minute = time.minute;
-                dustsensors = L.layerGroup();
-                layerControl.addOverlay(dustsensors, "Feinstaub")
-                let number = 140;
-                console.log(data[number][hour][minute]);
-                console.log(data.length);
-                console.log(Object.entries(data));
-                for (let obj of Object.entries(data)) {
-                    if (obj[1][hour] != undefined && obj[1][hour][minute] != undefined) {
-                        let element = obj[1][hour][minute];
-                        console.log(element);
-                        let marker = L.marker([element.lat, element.lon], { time: (time.hour + time.minute) }).addTo(dustsensors);
-                        if (marker !== undefined) {
-                            marker.bindPopup("Sensor p1: " + element.p1 + " p2: " + element.p2 + "<br/> Time: " + time.hour + ":" + time.minute);
+                    let id = element.sensor.id;
+                    json[id] = {};
+                    json[id]["0"] = {};
+                    json[id]["0"]["0"] = {};
+                    element.sensordatavalues.forEach(value => {
+                        if (value.value_type == "P1") {
+                            json[id]["0"]["0"]["p1"] = value.value;
+                        } else if (value.value_type == "P2") {
+                            json[id]["0"]["0"]["p2"] = value.value;
                         }
+                    });
+                    if (json[id]["0"]["0"]["p1"] == undefined && json[id]["0"]["0"]["p2"] == undefined) { //beide?
+                        delete json[id];
+                        return;
                     }
-                }
-
-                //setupWindApi(layerControl, timestamp);
-                // let geojson_now = L.geoJson(array, { time: timestamp });
-
-
-            })
-        }
-
-        function loadapi() {
-            $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.774,9.174,10', function (data) {
-                console.log(data);
-                data.forEach(element => {
-                    let marker = L.marker([element.location.latitude, element.location.longitude]).addTo(dustsensors);
-                    if (marker !== undefined) {
-                        marker.bindPopup("Sensor id: " + element.sensor.id + " timestamp: " + element.timestamp);
-                    }
+                    json[id]["0"]["0"]["lon"] = element.location.longitude;
+                    json[id]["0"]["0"]["lat"] = element.location.latitude;
                 });
-
+                setupWindApi(currentTime);
+                renderVoronoi(currentTime, stuttgartGeoJSON, data)
             })
         }
 
