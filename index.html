@@ -503,7 +503,7 @@
     }
 
     function currentData(layerControl) {
-        $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
+        return $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.8,9.2,10', function (data) {
             console.log(data);
             let timestamp = data[0].timestamp;
             dustsensors = L.layerGroup({timestamp});
