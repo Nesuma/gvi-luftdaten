@@ -262,13 +262,16 @@ async function downloadWindData(stationPromises) {
 
     let promises = [];
     let files = [];
+
     let paths = [
         {
-            link: "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/wind/now/10minutenwerte_wind_0",
+            link: "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/wind/now/",
+            file: "10minutenwerte_wind_0",
             ending: "_now.zip"
         },
         {
-            link: "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/wind/recent/10minutenwerte_wind_0",
+            link: "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/wind/recent/",
+            file: "10minutenwerte_wind_0",
             ending: "_akt.zip"
         }
     ];
@@ -276,97 +279,78 @@ async function downloadWindData(stationPromises) {
     for (let i = 0; i < paths.length; i++) {
         for (const [filename, dataPromise] of Object.entries(stationPromises)) {
             let numId = extractSensorId(filename);
-            let link = paths[i].link + numId + paths[i].ending;
-            let writeStream = fs.createWriteStream(dir + `${filename.slice(0, -4)}` + ".txt");
+            let link = paths[i].link + paths[i].file + numId + paths[i].ending;
+            let writeStream = fs.createWriteStream(dir + paths[i].file + numId + paths[i].ending);
             promises.push(new Promise(resolve => {
-                writeStream.on("end", function () {
-                    console.log("downloaded " + filename);
-                    resolve();
-                });
                 request_promise(link)
-                    .pipe(fs.createWriteStream(dir + filename))
+                    .pipe(writeStream)
                     .on("close", function () {
-                        yauzl.open(dir + filename, {lazyEntries: true}, function (err, zipfile) {
-                            if (err) throw err;
-                            zipfile.readEntry();
-                            zipfile.on("entry", function (entry) {
-                                if (/\/$/.test(entry.fileName)) {
-                                    zipfile.readEntry();
-                                } else {
-                                    // file entry
-                                    zipfile.openReadStream(entry, function (err, readStream) {
-                                        if (err) throw err;
-                                        readStream.on("end", function () {
-                                            zipfile.readEntry();
-                                        });
-                                        readStream.pipe(writeStream);
-                                    });
-                                }
-                            });
-                        });
+                        resolve();
+                        console.log("downloaded a" + filename);
                     });
             }));
             // files.push('10minutenwerte_wind_0' + numId + "_now.zip");
             // files.push("10minutenwerte_wind_0" + numId + "_akt.zip");
+
+            // while (files.length > 0) {
+            //     let filename = files.pop();
+            // }
+            //
+            // let link = "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/wind/now/" + file;
+            // console.log(link);
+            //
+            // promises.push(new Promise(resolve => {
+            //     request_promise(link)
+            //         .pipe(fs.createWriteStream(dir + file))
+            //         .on("close", function () {
+            //             resolve();
+            //             console.log("downloaded " + file);
+            //         });
+            //
+            //
+            // }));
+            // file =
+            // promises.push(new Promise(resolve => {
+            //     request_promise("https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/wind/recent/" + file)
+            //         .pipe(fs.createWriteStream(dir + file))
+            //         .on("close", function () {
+            //             resolve()
+            //             console.log("downloaded " + file);
+            //         });
+            // }));
         }
-        // while (files.length > 0) {
-        //     let filename = files.pop();
-        // }
-        //
-        // let link = "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/wind/now/" + file;
-        // console.log(link);
-        //
-        // promises.push(new Promise(resolve => {
-        //     request_promise(link)
-        //         .pipe(fs.createWriteStream(dir + file))
-        //         .on("close", function () {
-        //             resolve();
-        //             console.log("downloaded " + file);
-        //         });
-        //
-        //
-        // }));
-        // file =
-        // promises.push(new Promise(resolve => {
-        //     request_promise("https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/wind/recent/" + file)
-        //         .pipe(fs.createWriteStream(dir + file))
-        //         .on("close", function () {
-        //             resolve()
-        //             console.log("downloaded " + file);
-        //         });
-        // }));
     }
     for (let i = 0; i < promises.length; i++) {
         await promises[i];
     }
     console.log("Finished writing all files");
-    const directoryFiles = fs.readdirSync(dir);
-    try {
-        console.log("directoryFiles");
-        console.log(directoryFiles);
-        directoryFiles.forEach(filename => {
-            yauzl.open(dir + filename, {lazyEntries: true}, function (err, zipfile) {
-                if (err) throw err;
-                zipfile.readEntry();
-                zipfile.on("entry", function (entry) {
-                    if (/\/$/.test(entry.fileName)) {
-                        zipfile.readEntry();
-                    } else {
-                        // file entry
-                        zipfile.openReadStream(entry, function (err, readStream) {
-                            if (err) throw err;
-                            readStream.on("end", function () {
-                                zipfile.readEntry();
-                            });
-                            readStream.pipe(writeStream);
-                        });
-                    }
-                });
-            });
-        });
-    } catch (e) {
-
-    }
+// const directoryFiles = fs.readdirSync(dir);
+// try {
+//     console.log("directoryFiles");
+//     console.log(directoryFiles);
+//     directoryFiles.forEach(filename => {
+//         yauzl.open(dir + filename, {lazyEntries: true}, function (err, zipfile) {
+//             if (err) throw err;
+//             zipfile.readEntry();
+//             zipfile.on("entry", function (entry) {
+//                 if (/\/$/.test(entry.fileName)) {
+//                     zipfile.readEntry();
+//                 } else {
+//                     // file entry
+//                     zipfile.openReadStream(entry, function (err, readStream) {
+//                         if (err) throw err;
+//                         readStream.on("end", function () {
+//                             zipfile.readEntry();
+//                         });
+//                         readStream.pipe(fs.createWriteStream(dir + `${filename.slice(0, -4)}` + ".txt"));
+//                     });
+//                 }
+//             });
+//         });
+//     });
+// } catch (e) {
+//
+// }
 }
 
 async function getWindSensors() {
