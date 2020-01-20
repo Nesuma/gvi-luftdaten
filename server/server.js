@@ -324,33 +324,33 @@ async function downloadWindData(stationPromises) {
         await promises[i];
     }
     console.log("Finished writing all files");
-// const directoryFiles = fs.readdirSync(dir);
-// try {
-//     console.log("directoryFiles");
-//     console.log(directoryFiles);
-//     directoryFiles.forEach(filename => {
-//         yauzl.open(dir + filename, {lazyEntries: true}, function (err, zipfile) {
-//             if (err) throw err;
-//             zipfile.readEntry();
-//             zipfile.on("entry", function (entry) {
-//                 if (/\/$/.test(entry.fileName)) {
-//                     zipfile.readEntry();
-//                 } else {
-//                     // file entry
-//                     zipfile.openReadStream(entry, function (err, readStream) {
-//                         if (err) throw err;
-//                         readStream.on("end", function () {
-//                             zipfile.readEntry();
-//                         });
-//                         readStream.pipe(fs.createWriteStream(dir + `${filename.slice(0, -4)}` + ".txt"));
-//                     });
-//                 }
-//             });
-//         });
-//     });
-// } catch (e) {
-//
-// }
+    const directoryFiles = fs.readdirSync(dir);
+    try {
+        console.log("directoryFiles");
+        console.log(directoryFiles);
+        directoryFiles.forEach(filename => {
+            yauzl.open(dir + filename, {lazyEntries: true}, function (err, zipfile) {
+                if (err) throw err;
+                zipfile.readEntry();
+                zipfile.on("entry", function (entry) {
+                    if (/\/$/.test(entry.fileName)) {
+                        zipfile.readEntry();
+                    } else {
+                        // file entry
+                        zipfile.openReadStream(entry, function (err, readStream) {
+                            if (err) throw err;
+                            readStream.on("end", function () {
+                                zipfile.readEntry();
+                            });
+                            readStream.pipe(fs.createWriteStream(dir + `${filename.slice(0, -4)}` + ".txt"));
+                        });
+                    }
+                });
+            });
+        });
+    } catch (e) {
+
+    }
 }
 
 async function getWindSensors() {
