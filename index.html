@@ -286,7 +286,7 @@
                         weight: 2,
                         fillOpacity: 0.6
                     });
-                    polygon.bindPopup("Polygon #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust + " μg/m<sup>3</sup>");
+                    polygon.bindPopup("<strong>Polygon #" + sensor.id + "</strong><br/> Coordinates: (" + sensor.lat + ", " + sensor.lon + ") <br>Dust: " + sensor.dust + " μg/m<sup>3</sup>");
                     polygon.addTo(voronoiLayer);
                 } else {
                     console.log("No polygon for sensor, possibly out of area");
