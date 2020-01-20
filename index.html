@@ -412,7 +412,7 @@
                     if (from.value == to.max) {
                         console.log("current data");
                         currentData(new Date(), stuttgartGeoJSON);
-                        $("#slider-range").slider( "destroy" );
+                        $("#slider-range").slider("destroy");
                         display_time();
                         v = setInterval(function () {
                             currentData(new Date(), stuttgartGeoJSON);
@@ -494,7 +494,7 @@
 
         function renderVoronoi(currentTime, stuttgartGeoJSON, data) {
             let dustSensorsPromise;
-            if (data === undefined) {
+            if (data == undefined) {
                 console.log("getting old dust data for " + currentTime)
                 dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
             } else {
@@ -502,6 +502,7 @@
                 currentTime.setHours(0, 0, 0, 0);
                 dustSensorsPromise = data;
             }
+            console.log(dustSensorsPromise);
 
             let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
             layersPromise.then(layers => {
@@ -595,6 +596,8 @@
         async function currentData(currentTime, stuttgartGeoJSON) {
             await $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.774,9.174,10', function (data) {
                 let json = {};
+                console.log(data);
+
                 data.forEach(element => {
                     let id = element.sensor.id;
                     json[id] = {};
@@ -602,11 +605,19 @@
                     json[id]["0"]["0"] = {};
                     element.sensordatavalues.forEach(value => {
                         if (value.value_type == "P1") {
+                            console.log(value.value);
+
                             json[id]["0"]["0"]["p1"] = value.value;
                         } else if (value.value_type == "P2") {
                             json[id]["0"]["0"]["p2"] = value.value;
                         }
-                    })
+                    });
+                    if (json[id]["0"]["0"]["p1"] == undefined && json[id]["0"]["0"]["p2"] == undefined) { //beide?
+                        delete json[id];
+                        return;
+                    }
+                    json[id]["0"]["0"]["lon"] = element.location.longitude;
+                    json[id]["0"]["0"]["lat"] = element.location.latitude;
                 });
                 setupWindApi(currentTime);
                 renderVoronoi(currentTime, stuttgartGeoJSON, json)
