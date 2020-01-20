@@ -616,10 +616,10 @@
                         } else if (value.value_type == "P2") {
                             json[id]["0"]["0"]["p2"] = value.value;
                         }
-                    });
-                    setupWindApi(currentTime);
-                    renderVoronoi(currentTime, stuttgartGeoJSON, json)
-                })
+                    })
+                });
+                setupWindApi(currentTime);
+                renderVoronoi(currentTime, stuttgartGeoJSON, json)
             });
         }
 
