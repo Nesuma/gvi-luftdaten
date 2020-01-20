@@ -512,53 +512,55 @@
                 map.addLayer(foreground[voronoi]);
                 foreground[center] = layers[center];
                 layerControl.addOverlay(foreground[center], center);
-                map.addLayer(foreground[center]); 
+                map.addLayer(foreground[center]);
                 console.log("doing done");
             });
         }
+        let windPole;
 
         function setupWindApi(date) {
-            $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=1", function (data) {
+            console.log("do");
+            console.log(date.getDate());
+            if (date.getDate() < 5) { //doof: Hardcode, aber nur Daten ab 5.01.
+                console.log("error: no dynamic wind data");
                 if (map.hasLayer(foreground["Wind"])) {
-                    console.log(velocityLayer);
-                    velocityLayer.setData(data);
-                    return;
+                    console.log("removing wind");
+                    map.removeLayer(foreground["Wind"]);
+                    layerControl.removeLayer(foreground["Wind"]);
                 }
-                velocityLayer = L.velocityLayer({
-                    displayValues: true,
-                    displayOptions: {
-                        velocityType: "Global Wind",
-                        angleConvention: 'bearingCW',
-                        displayPosition: "bottomleft",
-                        displayEmptyString: "No wind data",
-                        speedUnit: 'km/h'
-                    },
-                    data: data,
-                    velocityScale: 0.01,
-                    onAdd: null,          // callback function
-                    onRemove: null,       // callback function
-                });
+                let windLayer = L.layerGroup();
+                setMarker(date, 4928, windLayer);
+                setMarker(date, 4931, windLayer);
 
-                foreground["Wind"] = velocityLayer;
+                foreground["Wind"] = windLayer;
                 layerControl.addOverlay(foreground["Wind"], "Wind");
                 map.addLayer(foreground["Wind"]);
-            })
-                .fail(function () {
-                    console.log("error: no dynamic wind data");
+            } else {
+                $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=1", function (data) {
                     if (map.hasLayer(foreground["Wind"])) {
-                        console.log("removing wind");
                         map.removeLayer(foreground["Wind"]);
                         layerControl.removeLayer(foreground["Wind"]);
                     }
-                    let windLayer = L.layerGroup();
+                    velocityLayer = L.velocityLayer({
+                        displayValues: true,
+                        displayOptions: {
+                            velocityType: "Global Wind",
+                            angleConvention: 'bearingCW',
+                            displayPosition: "bottomleft",
+                            displayEmptyString: "No wind data",
+                            speedUnit: 'km/h'
+                        },
+                        data: data,
+                        velocityScale: 0.01,
+                        onAdd: null,          // callback function
+                        onRemove: null,       // callback function
+                    });
 
-                    setMarker(date, 4928, windLayer);
-                    setMarker(date, 4931, windLayer);
-
-                    foreground["Wind"] = windLayer;
+                    foreground["Wind"] = velocityLayer;
                     layerControl.addOverlay(foreground["Wind"], "Wind");
                     map.addLayer(foreground["Wind"]);
                 });
+            }
         }
 
         function setMarker(date, sensorId, windLayer) {
@@ -606,6 +608,7 @@
                     json[id]["0"]["0"]["lon"] = element.location.longitude;
                     json[id]["0"]["0"]["lat"] = element.location.latitude;
                 });
+                windPole = false;
                 setupWindApi(currentTime);
                 renderVoronoi(currentTime, stuttgartGeoJSON, json)
             });
