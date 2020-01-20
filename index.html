@@ -247,7 +247,6 @@
                     necessarySensors.push(entry);
                 } catch (e) {
                     // console.log(e);
-                    console.log(dustSensors);
 
                     console.log("no value for id: " + key + " hour: " + hour + " minute: " + minute);
                 }
@@ -501,7 +500,7 @@
         let velocityLayer;
 
         function setupWindApi(date) {
-            $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=3", function (data) {
+            $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=1", function (data) {
                 if (map.hasLayer(foreground["Wind"])) {
                     console.log(velocityLayer);
                     velocityLayer.setData(data);
@@ -525,7 +524,16 @@
                 foreground["Wind"] = velocityLayer;
                 layerControl.addOverlay(foreground["Wind"], "Wind");
                 map.addLayer(foreground["Wind"]);
-            });
+            })
+                .fail(function () {
+                    console.log("error: no wind data");
+                    if (map.hasLayer(foreground["Wind"])) {
+                        console.log("removing wind");
+                        map.removeLayer(foreground["Wind"]);
+                        layerControl.removeLayer(foreground["Wind"]);
+                        return;
+                    }
+                });
         }
 
         async function currentData(currentTime, stuttgartGeoJSON) {
