@@ -389,6 +389,7 @@
                 //getDustSensorsByDate(date.year, date.month, date.day);
                 e.preventDefault();
             });
+            timeForm.dispatchEvent(new Event("submit"));
 
             // start slider here
             // let year = 2020;
@@ -444,6 +445,11 @@
             var seconds = zeroPad(fullDate.getSeconds(), 2);
             return year + '-' + month + '-' + date + ' ' + hours + ':' + minutes + ':' + seconds;
         };
+
+        renderVoronoi(start,stuttgartGeoJSON);
+
+        console.log("setupWindApi(formatDT(start))");
+        setupWindApi(formatDT(start));
 
         $("#slider-range").slider({
             range: false,
