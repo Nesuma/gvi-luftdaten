@@ -21,10 +21,11 @@
             width: 100%;
             height: 100%;
         }
+
         sup {
-   line-height: 0px;
-   font-size: 12px;
-}
+            line-height: 0px;
+            font-size: 12px;
+        }
 
         body {
             padding: 0;
@@ -279,8 +280,8 @@
         }
 
 
-        async function drawVoronoi(dustSensorPromise, hour, minute, reverseStuttgartPolygon, p2) {
-            console.log(hour + minute);
+        async function drawVoronoi(dustSensorPromise, day, hour, minute, reverseStuttgartPolygon, p2) {
+            console.log(dustSensorPromise);
 
             let centerLayer = L.layerGroup();
             let voronoiLayer = L.layerGroup();
@@ -300,7 +301,7 @@
                         weight: 2,
                         fillOpacity: 0.6
                     });
-                    polygon.bindPopup("Polygon #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust);
+                    polygon.bindPopup("Polygon #" + sensor.id + " (" + sensor.lat + "," + sensor.lon + ") dust: " + sensor.dust + "<br> day: " + day + " hour:" + hour + " minute: " + minute);
                     polygon.addTo(voronoiLayer);
                 } else {
                     console.log("No polygon for sensor, possibly out of area");
@@ -416,16 +417,19 @@
                     let period = periodInput.value;
                     console.log(period);
                     // WindJSLeaflet._clearWind();
+                    let v; 
                     if (from.value == to.max) {
                         console.log("current data");
                         currentData(new Date(), stuttgartGeoJSON);
                         $("#slider-range").slider("destroy");
                         display_time();
-                        setInterval(function () {
+                        v = setInterval(function () {
                             currentData(new Date(), stuttgartGeoJSON);
                             display_time();
                         }, 300000)
                     } else {
+                        clearTimeout(timeoutTime);
+                        clearInterval(v);
                         setupSlider(date, period, stuttgartGeoJSON);
                     }
                     //getDustSensorsByDate(date.year, date.month, date.day);
@@ -489,23 +493,30 @@
             });
         }
 
+        let timeoutTime;
         function display_time() {
             let currentTime = new Date();
             $('.slider-time').html(currentTime);
-            setTimeout('display_time()', 1000);
+            timeoutTime = setTimeout('display_time()', 1000);
         }
 
         function renderVoronoi(currentTime, stuttgartGeoJSON, data) {
             let dustSensorPromise;
-            if (data == undefined) {
+            if (data === undefined) {
+                console.log("defined");
+
                 dustSensorsPromise = getDustSensorsByDate(currentTime.getFullYear(), currentTime.getMonth() + 1, currentTime.getDate());
             } else {
                 console.log("current data");
                 currentTime.setHours(0, 0, 0, 0);
-                dustSensorPromise = data;
-            }
+                console.log(data);
 
-            let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
+                dustSensorPromise = data;
+
+            }
+            console.log(dustSensorPromise);
+
+            let layersPromise = drawVoronoi(dustSensorsPromise, currentTime.getDate(), currentTime.getHours(), currentTime.getMinutes(), stuttgartGeoJSON.features[0].geometry.coordinates[1]);
             layersPromise.then(layers => {
                 console.log("doing");
                 let voronoi = "Voronoi";
@@ -567,7 +578,7 @@
         }
 
         async function currentData(currentTime, stuttgartGeoJSON) {
-            await $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.774,9.174,10', function (data) {
+            $.getJSON('https://data.sensor.community/airrohr/v1/filter/area=48.774,9.174,10', function (data) {
                 let json = {};
                 data.forEach(element => {
                     let id = element.sensor.id;
@@ -589,7 +600,7 @@
                     json[id]["0"]["0"]["lat"] = element.location.latitude;
                 });
                 setupWindApi(currentTime);
-                renderVoronoi(currentTime, stuttgartGeoJSON, data)
+                renderVoronoi(currentTime, stuttgartGeoJSON, json)
             })
         }
 
