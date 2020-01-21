@@ -595,13 +595,17 @@
                 console.log(data);
                 let marker = L.marker([data.lat, data.lon], {
                     icon: getWindIcon(data.speed),
-                    rotationAngle: data.direction
+                    rotationAngle: convertDirection(data.direction)
                 });
                 let direction = (data.direction > 180) ? data.direction - 180 : data.direction + 180;
-                marker.bindPopup("<strong>Sensor station</strong><br/>Wind speed: " + data.speed + " m/s<br/> Direction: " + direction + " degree");
+                marker.bindPopup("<strong>Sensor station</strong><br/>Wind speed: " + data.speed * 3.6 + " km/h<br/> Direction: " + direction + " degree");
 
                 marker.addTo(windLayer);
             });
+        }
+
+        function convertDirection(direction) {
+            return (direction > 180) ? direction - 180 : direction + 180;
         }
 
         async function currentData(currentTime, stuttgartGeoJSON) {
