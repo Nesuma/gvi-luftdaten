@@ -340,7 +340,7 @@
 
             var div = L.DomUtil.create('div', 'info legend'),
                 grades = [0, 10, 20, 30, 40, 50, 60, 75, 125, 225, 275, 350],
-                labels = ["<strong>Particulate concentration in μg/m<sup>3</sup><strong>"],
+                labels = ["<strong>PM2.5 in μg/m<sup>3</sup></strong>"],
                 from, to;
 
             for (var i = 0; i < grades.length; i++) {
@@ -552,7 +552,7 @@
                         displayValues: true,
                         displayOptions: {
                             velocityType: "Global Wind",
-                            angleConvention: 'bearingCW',
+                            angleConvention: 'meteoCW',
                             displayPosition: "bottomleft",
                             displayEmptyString: "No wind data",
                             speedUnit: 'km/h'
@@ -595,7 +595,7 @@
                 console.log(data);
                 let marker = L.marker([data.lat, data.lon], {
                     icon: getWindIcon(data.speed),
-                    rotationAngle: convertDirection(data.direction)
+                    rotationAngle: data.direction
                 });
                 let direction = (data.direction > 180) ? data.direction - 180 : data.direction + 180;
                 marker.bindPopup("<strong>Sensor station</strong><br/>Wind speed: " + data.speed * 3.6 + " km/h<br/> Direction: " + direction + " degree");
