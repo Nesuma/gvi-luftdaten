@@ -9,7 +9,7 @@ cd server
 npm install
 node server.js
 ```
-Dadurch wird ein lokaler Server auf localhost:300 erzeugt.  
+Dadurch wird ein lokaler Server auf localhost:3000 erzeugt.  
 Durch den Aufruf von http://localhost:3000/ im Browser lässt sich die Karte anzeigen.
 
 ## Wind-JS-Server starten:
