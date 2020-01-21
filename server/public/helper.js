@@ -32,14 +32,13 @@ function getColor(density) {
                             density > 60 ? '#f3784c' :
                                 density > 50 ? '#fba25d' :
                                     density > 40 ? '#fcaf65' :
-                                        density > 35 ? '#f6faaf' :
-                                            density > 30  ? '#f6faaf' :
-                                                density > 25 ? '#e8f6a4' :
-                                                    density > 20 ? '#b1dfa1' :
-                                                        density > 10 ? '#b1dfa1' :
-                                                            density > 0 ? '#73c3a7' :
-                                                                '#888888';
+                                        density > 30 ? '#f6faaf' :
+                                            density > 20 ? '#e8f6a4' :
+                                                density > 10 ? '#b1dfa1' :
+                                                    density > 0 ? '#73c3a7' :
+                                                        '#888888';
 }
+
 // function getColor(density) {
 //     return density > 350 ? '#330000' :
 //         density > 275 ? '#660000' :
@@ -60,7 +59,6 @@ function getColor(density) {
 // }
 
 
-
 function getCoordConverter() {
     let otherProjection = "+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs"; // projection to EPGS 25832
 
@@ -78,7 +76,7 @@ function isOutsidePolygon(entry, polygon) {
     return temp.length < 1;
 }
 
-function intersection(cell,polygon){
+function intersection(cell, polygon) {
     // martinez seems to have a bug, this is a workaround
     let intersection = cell;
     try {
