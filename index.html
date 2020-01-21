@@ -520,8 +520,8 @@
 
         function setupWindApi(date) {
             console.log("do");
-            console.log(date.getDate());
-            if (date.getDate() < 5) { //doof: Hardcode, aber nur Daten ab 5.01.
+            console.log(new Date(2020, 0, 5));
+            if (date < new Date(2020, 0, 5)) { //doof: Hardcode, aber nur Daten ab 5.01.
                 console.log("error: no dynamic wind data");
                 if (map.hasLayer(foreground["Wind"])) {
                     console.log("removing wind");
