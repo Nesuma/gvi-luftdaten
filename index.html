@@ -516,30 +516,37 @@
                 console.log("doing done");
             });
         }
-        let windPole;
 
         function setupWindApi(date) {
             console.log("do");
             console.log(new Date(2020, 0, 5));
-            if (date < new Date(2020, 0, 5)) { //doof: Hardcode, aber nur Daten ab 5.01.
+            if (date < new Date(2020, 0, 5)) {
                 console.log("error: no dynamic wind data");
                 if (map.hasLayer(foreground["Wind"])) {
                     console.log("removing wind");
                     map.removeLayer(foreground["Wind"]);
                     layerControl.removeLayer(foreground["Wind"]);
                 }
+                if (map.hasLayer(foreground["WindRose"])) {
+                    map.removeLayer(foreground["WindRose"]);
+                    layerControl.removeLayer(foreground["WindRose"]);
+                }
                 let windLayer = L.layerGroup();
                 setMarker(date, 4928, windLayer);
                 setMarker(date, 4931, windLayer);
 
-                foreground["Wind"] = windLayer;
-                layerControl.addOverlay(foreground["Wind"], "Wind");
-                map.addLayer(foreground["Wind"]);
+                foreground["WindRose"] = windLayer;
+                layerControl.addOverlay(foreground["WindRose"], "WindRose");
+                map.addLayer(foreground["WindRose"]);
             } else {
                 $.getJSON("http://localhost:7000/nearest?timeIso=" + date + "&searchLimit=1", function (data) {
                     if (map.hasLayer(foreground["Wind"])) {
                         map.removeLayer(foreground["Wind"]);
                         layerControl.removeLayer(foreground["Wind"]);
+                    }
+                    if (map.hasLayer(foreground["WindRose"])) {
+                        map.removeLayer(foreground["WindRose"]);
+                        layerControl.removeLayer(foreground["WindRose"]);
                     }
                     velocityLayer = L.velocityLayer({
                         displayValues: true,
@@ -560,6 +567,17 @@
                     layerControl.addOverlay(foreground["Wind"], "Wind");
                     map.addLayer(foreground["Wind"]);
                 });
+                //TODO: show both: wind and windsock
+                // if (map.hasLayer(foreground["WindRose"])) {
+                //     map.removeLayer(foreground["WindRose"]);
+                //     layerControl.removeLayer(foreground["WindRose"]);
+                // }
+                // let windLayer = L.layerGroup();
+                // setMarker(date, 4928, windLayer);
+                // setMarker(date, 4931, windLayer);
+                // foreground["WindRose"] = windLayer;
+                // layerControl.addOverlay(foreground["WindRose"], "WindRose");
+                // map.addLayer(foreground["WindRose"]);
             }
         }
 
@@ -608,7 +626,6 @@
                     json[id]["0"]["0"]["lon"] = element.location.longitude;
                     json[id]["0"]["0"]["lat"] = element.location.latitude;
                 });
-                windPole = false;
                 setupWindApi(currentTime);
                 renderVoronoi(currentTime, stuttgartGeoJSON, json)
             });
